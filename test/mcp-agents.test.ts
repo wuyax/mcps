@@ -12,6 +12,7 @@ import {
 
 const EXPECTED_AGENTS = [
   "antigravity",
+  "antigravity-cli",
   "cline",
   "cline-cli",
   "claude-code",
@@ -28,7 +29,7 @@ const EXPECTED_AGENTS = [
 ] as const;
 
 describe("mcp agent catalog", () => {
-  it("enumerates all 14 agents", () => {
+  it("enumerates all 15 agents", () => {
     const types = getMcpAgentTypes();
     expect(types).toHaveLength(EXPECTED_AGENTS.length);
     for (const expected of EXPECTED_AGENTS) {
@@ -53,6 +54,7 @@ describe("mcp agent catalog", () => {
     const projectAgents = getMcpAgentsSupportingProjectScope();
     for (const expected of [
       "antigravity",
+      "antigravity-cli",
       "claude-code",
       "cursor",
       "codex",
@@ -85,10 +87,10 @@ describe("mcp agent catalog", () => {
   });
 
   it("resolves aliases", () => {
-    expect(mcpAgentAliases["antigravity-cli"]).toBe("antigravity");
+    expect(mcpAgentAliases.agy).toBe("antigravity-cli");
     expect(mcpAgentAliases.gemini).toBe("gemini-cli");
     expect(mcpAgentAliases["cline-vscode"]).toBe("cline");
-    expect(resolveMcpAgentAlias("antigravity-cli")).toBe("antigravity");
+    expect(resolveMcpAgentAlias("agy")).toBe("antigravity-cli");
     expect(resolveMcpAgentAlias("gemini")).toBe("gemini-cli");
     expect(resolveMcpAgentAlias("cline-vscode")).toBe("cline");
     expect(resolveMcpAgentAlias("cursor")).toBe("cursor");
@@ -97,6 +99,7 @@ describe("mcp agent catalog", () => {
 
   it("exposes a type-narrowing guard", () => {
     expect(isMcpAgentType("cursor")).toBe(true);
+    expect(isMcpAgentType("antigravity-cli")).toBe(true);
     expect(isMcpAgentType("made-up")).toBe(false);
   });
 
@@ -108,6 +111,8 @@ describe("mcp agent catalog", () => {
     expect(typeof mcpAgents.vscode.transformConfig).toBe("function");
 
     expect(mcpAgents.cursor.transformConfig).toBeUndefined();
+    expect(mcpAgents.antigravity.transformConfig).toBeUndefined();
+    expect(mcpAgents["antigravity-cli"].transformConfig).toBeUndefined();
     expect(mcpAgents["claude-code"].transformConfig).toBeUndefined();
     expect(mcpAgents["github-copilot-cli"].transformConfig).toBeUndefined();
   });

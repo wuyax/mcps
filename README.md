@@ -2,7 +2,7 @@
 
 Cross-platform MCP (Model Context Protocol) server installer and manager for AI coding agents.
 
-Supports **14 agents**, multiple config formats (`json`, `jsonc`, `yaml`, `toml`), and all MCP server types (`remote` HTTP/SSE, `package` via npx, and custom `command` stdio).
+Supports **15 agents**, multiple config formats (`json`, `jsonc`, `yaml`, `toml`), and all MCP server types (`remote` HTTP/SSE, `package` via npx, and custom `command` stdio).
 
 ---
 
@@ -11,6 +11,7 @@ Supports **14 agents**, multiple config formats (`json`, `jsonc`, `yaml`, `toml`
 | Agent Name | Identifier | Scope | Transports | Config Format |
 | :--- | :--- | :--- | :--- | :--- |
 | **Antigravity** | `antigravity` | Project / Global | stdio, http, sse | `jsonc` |
+| **Antigravity CLI** | `antigravity-cli` | Project / Global | stdio, http, sse | `jsonc` |
 | **Cline (VSCode)** | `cline` | Global | stdio, http, sse | `jsonc` |
 | **Cline CLI** | `cline-cli` | Global | stdio, http, sse | `jsonc` |
 | **Claude Code** | `claude-code` | Project / Global | stdio, http, sse | `jsonc` |

@@ -51,7 +51,8 @@ const getPlatformPaths = (): PlatformPaths => {
 
 const { appSupport, vscodePath, gooseConfigPath, zedConfigPath } = getPlatformPaths();
 
-const antigravityConfigPath = join(home, ".gemini", "config", "mcp_config.json");
+const antigravityConfigPath = join(home, ".gemini", "antigravity", "mcp_config.json");
+const antigravityCliConfigPath = join(home, ".gemini", "config", "mcp_config.json");
 const clineCliConfigPath = join(
   process.env.CLINE_DIR || join(home, ".cline"),
   "data",
@@ -82,10 +83,22 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     format: "jsonc",
     supportedTransports: ALL_TRANSPORTS,
     detectGlobalInstall: () =>
-      existsSync(antigravityConfigPath) ||
-      existsSync(join(home, ".gemini", "config")) ||
-      existsSync(join(home, ".gemini", "antigravity")) ||
-      existsSync(join(home, ".gemini", "antigravity-cli")),
+      existsSync(antigravityConfigPath) || existsSync(join(home, ".gemini", "antigravity")),
+    detectProjectInstall: (cwd) =>
+      existsSync(join(cwd, ".agents", "mcp_config.json")) ||
+      existsSync(join(cwd, ".agents")),
+  },
+  "antigravity-cli": {
+    name: "antigravity-cli",
+    displayName: "Antigravity CLI",
+    globalConfigPath: antigravityCliConfigPath,
+    projectConfigPath: ".agents/mcp_config.json",
+    configKey: "mcpServers",
+    format: "jsonc",
+    supportedTransports: ALL_TRANSPORTS,
+    detectGlobalInstall: () =>
+      existsSync(join(home, ".gemini", "antigravity-cli")) ||
+      existsSync(antigravityCliConfigPath),
     detectProjectInstall: (cwd) =>
       existsSync(join(cwd, ".agents", "mcp_config.json")) ||
       existsSync(join(cwd, ".agents")),
@@ -249,7 +262,7 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
 };
 
 export const mcpAgentAliases: Record<string, McpAgentType> = {
-  "antigravity-cli": "antigravity",
+  agy: "antigravity-cli",
   "cline-vscode": "cline",
   gemini: "gemini-cli",
   "github-copilot": "vscode",
