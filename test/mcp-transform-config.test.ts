@@ -117,24 +117,3 @@ describe("transformConfig: codex", () => {
   });
 });
 
-describe("transformConfig: github-copilot-cli", () => {
-  const transform = mcpAgents["github-copilot-cli"].transformConfig!;
-
-  it("passes through unchanged for global scope", () => {
-    expect(transform("foo", stdio, { global: true })).toBe(stdio);
-  });
-
-  it("applies vscode shape for project scope", () => {
-    expect(transform("foo", stdio, { global: false })).toMatchObject({
-      type: "stdio",
-      command: stdio.command,
-      args: stdio.args,
-      env: stdio.env,
-    });
-    expect(transform("foo", remote, { global: false })).toMatchObject({
-      type: "http",
-      url: remote.url,
-      headers: remote.headers,
-    });
-  });
-});

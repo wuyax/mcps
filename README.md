@@ -10,7 +10,7 @@ Supports **14 agents**, multiple config formats (`json`, `jsonc`, `yaml`, `toml`
 
 | Agent Name | Identifier | Scope | Transports | Config Format |
 | :--- | :--- | :--- | :--- | :--- |
-| **Antigravity** | `antigravity` | Global | stdio, http, sse | `jsonc` |
+| **Antigravity** | `antigravity` | Project / Global | stdio, http, sse | `jsonc` |
 | **Cline (VSCode)** | `cline` | Global | stdio, http, sse | `jsonc` |
 | **Cline CLI** | `cline-cli` | Global | stdio, http, sse | `jsonc` |
 | **Claude Code** | `claude-code` | Project / Global | stdio, http, sse | `jsonc` |

@@ -52,6 +52,7 @@ describe("mcp agent catalog", () => {
   it("flags project-capable agents", () => {
     const projectAgents = getMcpAgentsSupportingProjectScope();
     for (const expected of [
+      "antigravity",
       "claude-code",
       "cursor",
       "codex",
@@ -84,8 +85,10 @@ describe("mcp agent catalog", () => {
   });
 
   it("resolves aliases", () => {
+    expect(mcpAgentAliases["antigravity-cli"]).toBe("antigravity");
     expect(mcpAgentAliases.gemini).toBe("gemini-cli");
     expect(mcpAgentAliases["cline-vscode"]).toBe("cline");
+    expect(resolveMcpAgentAlias("antigravity-cli")).toBe("antigravity");
     expect(resolveMcpAgentAlias("gemini")).toBe("gemini-cli");
     expect(resolveMcpAgentAlias("cline-vscode")).toBe("cline");
     expect(resolveMcpAgentAlias("cursor")).toBe("cursor");
@@ -103,9 +106,9 @@ describe("mcp agent catalog", () => {
     expect(typeof mcpAgents.codex.transformConfig).toBe("function");
     expect(typeof mcpAgents.opencode.transformConfig).toBe("function");
     expect(typeof mcpAgents.vscode.transformConfig).toBe("function");
-    expect(typeof mcpAgents["github-copilot-cli"].transformConfig).toBe("function");
 
     expect(mcpAgents.cursor.transformConfig).toBeUndefined();
     expect(mcpAgents["claude-code"].transformConfig).toBeUndefined();
+    expect(mcpAgents["github-copilot-cli"].transformConfig).toBeUndefined();
   });
 });

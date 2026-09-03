@@ -15,6 +15,7 @@ interface PlatformPaths {
   appSupport: string;
   vscodePath: string;
   gooseConfigPath: string;
+  zedConfigPath: string;
 }
 
 const getPlatformPaths = (): PlatformPaths => {
@@ -26,6 +27,7 @@ const getPlatformPaths = (): PlatformPaths => {
       appSupport: appData,
       vscodePath: join(appData, "Code", "User"),
       gooseConfigPath: join(appData, "Block", "goose", "config", "config.yaml"),
+      zedConfigPath: join(appData, "Zed", "settings.json"),
     };
   }
 
@@ -34,6 +36,7 @@ const getPlatformPaths = (): PlatformPaths => {
       appSupport: join(home, "Library", "Application Support"),
       vscodePath: join(home, "Library", "Application Support", "Code", "User"),
       gooseConfigPath: join(home, ".config", "goose", "config.yaml"),
+      zedConfigPath: join(home, ".config", "zed", "settings.json"),
     };
   }
 
@@ -42,12 +45,13 @@ const getPlatformPaths = (): PlatformPaths => {
     appSupport: configDir,
     vscodePath: join(configDir, "Code", "User"),
     gooseConfigPath: join(configDir, "goose", "config.yaml"),
+    zedConfigPath: join(configDir, "zed", "settings.json"),
   };
 };
 
-const { appSupport, vscodePath, gooseConfigPath } = getPlatformPaths();
+const { appSupport, vscodePath, gooseConfigPath, zedConfigPath } = getPlatformPaths();
 
-const antigravityConfigPath = join(home, ".gemini", "antigravity", "mcp_config.json");
+const antigravityConfigPath = join(home, ".gemini", "config", "mcp_config.json");
 const clineCliConfigPath = join(
   process.env.CLINE_DIR || join(home, ".cline"),
   "data",
@@ -61,10 +65,10 @@ const clineExtensionConfigPath = join(
   "settings",
   "cline_mcp_settings.json",
 );
-const copilotConfigPath = join(home, ".copilot", "mcp-config.json");
-
-const UNSUPPORTED_STDIO_MESSAGE =
-  "This agent supports only remote MCP servers (HTTP/SSE). Stdio commands are not supported.";
+const copilotConfigPath = join(
+  process.env.COPILOT_HOME?.trim() || join(home, ".copilot"),
+  "mcp-config.json",
+);
 
 const ALL_TRANSPORTS: readonly McpTransportType[] = ["stdio", "http", "sse"];
 
@@ -73,10 +77,18 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     name: "antigravity",
     displayName: "Antigravity",
     globalConfigPath: antigravityConfigPath,
+    projectConfigPath: ".agents/mcp_config.json",
     configKey: "mcpServers",
     format: "jsonc",
     supportedTransports: ALL_TRANSPORTS,
-    detectGlobalInstall: () => existsSync(join(home, ".gemini", "antigravity")),
+    detectGlobalInstall: () =>
+      existsSync(antigravityConfigPath) ||
+      existsSync(join(home, ".gemini", "config")) ||
+      existsSync(join(home, ".gemini", "antigravity")) ||
+      existsSync(join(home, ".gemini", "antigravity-cli")),
+    detectProjectInstall: (cwd) =>
+      existsSync(join(cwd, ".agents", "mcp_config.json")) ||
+      existsSync(join(cwd, ".agents")),
   },
   cline: {
     name: "cline",
@@ -168,15 +180,16 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     name: "github-copilot-cli",
     displayName: "GitHub Copilot CLI",
     globalConfigPath: copilotConfigPath,
-    projectConfigPath: ".vscode/mcp.json",
+    projectConfigPath: ".mcp.json",
     configKey: "mcpServers",
-    projectConfigKey: "servers",
     format: "jsonc",
     supportedTransports: ALL_TRANSPORTS,
-    detectGlobalInstall: () => existsSync(copilotConfigPath),
-    detectProjectInstall: (cwd) => existsSync(join(cwd, ".vscode", "mcp.json")),
-    transformConfig: (_name, config, context) =>
-      context.global ? config : transformVscodeServerConfig(config),
+    detectGlobalInstall: () =>
+      existsSync(copilotConfigPath) ||
+      existsSync(process.env.COPILOT_HOME?.trim() || join(home, ".copilot")),
+    detectProjectInstall: (cwd) =>
+      existsSync(join(cwd, ".mcp.json")) ||
+      existsSync(join(cwd, ".github", "mcp.json")),
   },
   mcporter: {
     name: "mcporter",
@@ -221,19 +234,22 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
   zed: {
     name: "zed",
     displayName: "Zed",
-    globalConfigPath: join(appSupport, "Zed", "settings.json"),
+    globalConfigPath: zedConfigPath,
     projectConfigPath: ".zed/settings.json",
     configKey: "context_servers",
     format: "jsonc",
     supportedTransports: ALL_TRANSPORTS,
-    unsupportedTransportMessage: UNSUPPORTED_STDIO_MESSAGE,
-    detectGlobalInstall: () => existsSync(join(appSupport, "Zed")),
+    detectGlobalInstall: () =>
+      existsSync(zedConfigPath) ||
+      existsSync(join(process.env.XDG_CONFIG_HOME || join(home, ".config"), "zed")) ||
+      existsSync(join(appSupport, "Zed")),
     detectProjectInstall: (cwd) => existsSync(join(cwd, ".zed", "settings.json")),
     transformConfig: (_name, config) => transformZedServerConfig(config),
   },
 };
 
 export const mcpAgentAliases: Record<string, McpAgentType> = {
+  "antigravity-cli": "antigravity",
   "cline-vscode": "cline",
   gemini: "gemini-cli",
   "github-copilot": "vscode",

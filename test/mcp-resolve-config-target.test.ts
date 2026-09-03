@@ -30,14 +30,18 @@ describe("resolveMcpConfigTarget", () => {
     expect(configPath).toBe(mcpAgents["claude-desktop"].globalConfigPath);
   });
 
-  it("prefers projectConfigKey when set and scope is project (github-copilot-cli)", () => {
-    const projectTarget = resolveMcpConfigTarget(mcpAgents["github-copilot-cli"], {
+  it("prefers projectConfigKey when set and scope is project", () => {
+    const customAgent: McpAgentConfig = {
+      ...mcpAgents.cursor,
+      projectConfigKey: "customServers",
+    };
+    const projectTarget = resolveMcpConfigTarget(customAgent, {
       global: false,
       cwd: "/proj",
     });
-    expect(projectTarget.configKey).toBe("servers");
+    expect(projectTarget.configKey).toBe("customServers");
 
-    const globalTarget = resolveMcpConfigTarget(mcpAgents["github-copilot-cli"], {
+    const globalTarget = resolveMcpConfigTarget(customAgent, {
       global: true,
       cwd: "/proj",
     });
