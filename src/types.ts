@@ -8,10 +8,17 @@ export type McpAgentType =
   | "codex"
   | "cursor"
   | "gemini-cli"
+  | "grok"
   | "goose"
   | "github-copilot-cli"
+  | "kimi-code-cli"
+  | "kiro"
   | "mcporter"
   | "opencode"
+  | "pi"
+  | "qoder"
+  | "qwen-code"
+  | "trae"
   | "vscode"
   | "zed";
 

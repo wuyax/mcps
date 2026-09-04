@@ -68,4 +68,14 @@ describe("resolveMcpConfigTarget", () => {
     expect(configPath.endsWith(".cursor/mcp.json")).toBe(true);
     expect(configPath.startsWith(process.cwd())).toBe(true);
   });
+
+  it("resolves qoder target paths for global and project scopes", () => {
+    const globalTarget = resolveMcpConfigTarget(mcpAgents.qoder, { global: true });
+    expect(globalTarget.configPath.endsWith(".qoder/settings.json")).toBe(true);
+    expect(globalTarget.configKey).toBe("mcpServers");
+
+    const projectTarget = resolveMcpConfigTarget(mcpAgents.qoder, { global: false, cwd: "/proj" });
+    expect(projectTarget.configPath).toBe("/proj/.mcp.json");
+    expect(projectTarget.configKey).toBe("mcpServers");
+  });
 });

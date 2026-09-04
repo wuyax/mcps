@@ -4,7 +4,13 @@ import { join } from "node:path";
 
 import { transformCodexServerConfig } from "./transforms/codex.ts";
 import { transformGooseServerConfig } from "./transforms/goose.ts";
+import { transformGrokServerConfig } from "./transforms/grok.ts";
+import { transformKimiCodeServerConfig } from "./transforms/kimi-code.ts";
+import { transformKiroServerConfig } from "./transforms/kiro.ts";
 import { transformOpenCodeServerConfig } from "./transforms/opencode.ts";
+import { transformPiServerConfig } from "./transforms/pi.ts";
+import { transformQwenCodeServerConfig } from "./transforms/qwen-code.ts";
+import { transformTraeServerConfig } from "./transforms/trae.ts";
 import { transformVscodeServerConfig } from "./transforms/vscode.ts";
 import { transformZedServerConfig } from "./transforms/zed.ts";
 import type { McpAgentConfig, McpAgentType, McpTransportType } from "./types.ts";
@@ -14,6 +20,7 @@ const home = homedir();
 interface PlatformPaths {
   appSupport: string;
   vscodePath: string;
+  traePath: string;
   gooseConfigPath: string;
   zedConfigPath: string;
 }
@@ -26,6 +33,7 @@ const getPlatformPaths = (): PlatformPaths => {
     return {
       appSupport: appData,
       vscodePath: join(appData, "Code", "User"),
+      traePath: join(appData, "Trae", "User"),
       gooseConfigPath: join(appData, "Block", "goose", "config", "config.yaml"),
       zedConfigPath: join(appData, "Zed", "settings.json"),
     };
@@ -35,6 +43,7 @@ const getPlatformPaths = (): PlatformPaths => {
     return {
       appSupport: join(home, "Library", "Application Support"),
       vscodePath: join(home, "Library", "Application Support", "Code", "User"),
+      traePath: join(home, "Library", "Application Support", "Trae", "User"),
       gooseConfigPath: join(home, ".config", "goose", "config.yaml"),
       zedConfigPath: join(home, ".config", "zed", "settings.json"),
     };
@@ -44,12 +53,13 @@ const getPlatformPaths = (): PlatformPaths => {
   return {
     appSupport: configDir,
     vscodePath: join(configDir, "Code", "User"),
+    traePath: join(configDir, "Trae", "User"),
     gooseConfigPath: join(configDir, "goose", "config.yaml"),
     zedConfigPath: join(configDir, "zed", "settings.json"),
   };
 };
 
-const { appSupport, vscodePath, gooseConfigPath, zedConfigPath } = getPlatformPaths();
+const { appSupport, vscodePath, traePath, gooseConfigPath, zedConfigPath } = getPlatformPaths();
 
 const antigravityMcpConfigPath = join(home, ".gemini", "config", "mcp_config.json");
 const clineCliConfigPath = join(
@@ -69,6 +79,32 @@ const copilotConfigPath = join(
   process.env.COPILOT_HOME?.trim() || join(home, ".copilot"),
   "mcp-config.json",
 );
+const grokConfigPath = join(
+  process.env.GROK_HOME?.trim() || join(home, ".grok"),
+  "config.toml",
+);
+const kimiCodeConfigPath = join(
+  process.env.KIMI_CODE_HOME?.trim() || join(home, ".kimi-code"),
+  "mcp.json",
+);
+const kiroConfigPath = join(
+  process.env.KIRO_HOME?.trim() || join(home, ".kiro"),
+  "settings",
+  "mcp.json",
+);
+const qoderConfigPath = join(
+  process.env.QODER_HOME?.trim() || join(home, ".qoder"),
+  "settings.json",
+);
+const qwenCodeConfigPath = join(
+  process.env.QWEN_CODE_HOME?.trim() ||
+    process.env.QWEN_HOME?.trim() ||
+    join(home, ".qwen"),
+  "settings.json",
+);
+const traeConfigPath = existsSync(join(home, ".trae", "mcp.json"))
+  ? join(home, ".trae", "mcp.json")
+  : join(traePath, "mcp.json");
 
 const ALL_TRANSPORTS: readonly McpTransportType[] = ["stdio", "http", "sse"];
 
@@ -88,6 +124,7 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
       existsSync(join(cwd, ".agents", "mcp_config.json")) ||
       existsSync(join(cwd, ".agents")),
   },
+  // https://antigravity.google/docs/cli/mcp/
   "antigravity-cli": {
     name: "antigravity-cli",
     displayName: "Antigravity CLI",
@@ -120,6 +157,7 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     supportedTransports: ALL_TRANSPORTS,
     detectGlobalInstall: () => existsSync(join(home, ".cline")),
   },
+  // https://code.claude.com/docs/en/mcp-quickstart#edit-mcp-json-directly
   "claude-code": {
     name: "claude-code",
     displayName: "Claude Code",
@@ -142,6 +180,7 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
       "Claude Desktop currently supports only stdio MCP servers. Use a package name or command instead of a URL.",
     detectGlobalInstall: () => existsSync(join(appSupport, "Claude", "claude_desktop_config.json")),
   },
+  // https://learn.chatgpt.com/docs/extend/mcp?surface=app
   codex: {
     name: "codex",
     displayName: "Codex",
@@ -176,6 +215,23 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     detectGlobalInstall: () => existsSync(join(home, ".gemini")),
     detectProjectInstall: (cwd) => existsSync(join(cwd, ".gemini", "settings.json")),
   },
+  // https://docs.x.ai/build/features/mcp-servers.md
+  grok: {
+    name: "grok",
+    displayName: "Grok",
+    globalConfigPath: grokConfigPath,
+    projectConfigPath: ".grok/config.toml",
+    configKey: "mcp_servers",
+    format: "toml",
+    supportedTransports: ALL_TRANSPORTS,
+    detectGlobalInstall: () =>
+      existsSync(grokConfigPath) ||
+      existsSync(process.env.GROK_HOME?.trim() || join(home, ".grok")),
+    detectProjectInstall: (cwd) =>
+      existsSync(join(cwd, ".grok", "config.toml")) ||
+      existsSync(join(cwd, ".grok")),
+    transformConfig: (_name, config) => transformGrokServerConfig(config),
+  },
   goose: {
     name: "goose",
     displayName: "Goose",
@@ -202,6 +258,40 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     detectProjectInstall: (cwd) =>
       existsSync(join(cwd, ".mcp.json")) ||
       existsSync(join(cwd, ".github", "mcp.json")),
+  },
+  // https://www.kimi.com/code/docs/en/kimi-code-cli/customization/mcp.html
+  "kimi-code-cli": {
+    name: "kimi-code-cli",
+    displayName: "Kimi Code CLI",
+    globalConfigPath: kimiCodeConfigPath,
+    projectConfigPath: ".kimi-code/mcp.json",
+    configKey: "mcpServers",
+    format: "jsonc",
+    supportedTransports: ALL_TRANSPORTS,
+    detectGlobalInstall: () =>
+      existsSync(kimiCodeConfigPath) ||
+      existsSync(process.env.KIMI_CODE_HOME?.trim() || join(home, ".kimi-code")),
+    detectProjectInstall: (cwd) =>
+      existsSync(join(cwd, ".kimi-code", "mcp.json")) ||
+      existsSync(join(cwd, ".kimi-code")),
+    transformConfig: (_name, config) => transformKimiCodeServerConfig(config),
+  },
+  // https://kiro.dev/docs/mcp/configuration.md
+  kiro: {
+    name: "kiro",
+    displayName: "Kiro",
+    globalConfigPath: kiroConfigPath,
+    projectConfigPath: ".kiro/settings/mcp.json",
+    configKey: "mcpServers",
+    format: "jsonc",
+    supportedTransports: ALL_TRANSPORTS,
+    detectGlobalInstall: () =>
+      existsSync(kiroConfigPath) ||
+      existsSync(process.env.KIRO_HOME?.trim() || join(home, ".kiro")),
+    detectProjectInstall: (cwd) =>
+      existsSync(join(cwd, ".kiro", "settings", "mcp.json")) ||
+      existsSync(join(cwd, ".kiro")),
+    transformConfig: (_name, config) => transformKiroServerConfig(config),
   },
   mcporter: {
     name: "mcporter",
@@ -230,6 +320,94 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
       existsSync(join(process.env.XDG_CONFIG_HOME || join(home, ".config"), "opencode")),
     detectProjectInstall: (cwd) => existsSync(join(cwd, "opencode.json")),
     transformConfig: (_name, config) => transformOpenCodeServerConfig(config),
+  },
+  // https://pi.dev/packages/pi-mcp-extension
+  pi: {
+    name: "pi",
+    displayName: "Pi",
+    globalConfigPath: join(home, ".pi", "agent", "mcp.json"),
+    projectConfigPath: ".pi/mcp.json",
+    configKey: "mcpServers",
+    format: "jsonc",
+    supportedTransports: ALL_TRANSPORTS,
+    detectGlobalInstall: () => existsSync(join(home, ".pi")),
+    detectProjectInstall: (cwd) =>
+      existsSync(join(cwd, ".pi", "mcp.json")) || existsSync(join(cwd, ".pi")),
+    transformConfig: (_name, config) => transformPiServerConfig(config),
+  },
+  // https://docs.qoder.com/zh/cli/mcp-servers
+  qoder: {
+    name: "qoder",
+    displayName: "Qoder",
+    globalConfigPath: qoderConfigPath,
+    projectConfigPath: ".mcp.json",
+    configKey: "mcpServers",
+    format: "jsonc",
+    supportedTransports: ALL_TRANSPORTS,
+    detectGlobalInstall: () =>
+      existsSync(qoderConfigPath) ||
+      existsSync(process.env.QODER_HOME?.trim() || join(home, ".qoder")),
+    detectProjectInstall: (cwd) =>
+      existsSync(join(cwd, ".mcp.json")) ||
+      existsSync(join(cwd, ".qoder", "settings.json")) ||
+      existsSync(join(cwd, ".qoder")),
+    resolveConfigPath: ({ global: isGlobal, cwd }) => {
+      if (isGlobal) return qoderConfigPath;
+      if (existsSync(join(cwd, ".qoder", "settings.json"))) {
+        return join(cwd, ".qoder", "settings.json");
+      }
+      return join(cwd, ".mcp.json");
+    },
+  },
+  // https://qwenlm.github.io/qwen-code-docs/en/users/features/mcp/
+  "qwen-code": {
+    name: "qwen-code",
+    displayName: "Qwen Code",
+    globalConfigPath: qwenCodeConfigPath,
+    projectConfigPath: ".qwen/settings.json",
+    configKey: "mcpServers",
+    format: "jsonc",
+    supportedTransports: ALL_TRANSPORTS,
+    detectGlobalInstall: () =>
+      existsSync(qwenCodeConfigPath) ||
+      existsSync(
+        process.env.QWEN_CODE_HOME?.trim() ||
+          process.env.QWEN_HOME?.trim() ||
+          join(home, ".qwen"),
+      ),
+    detectProjectInstall: (cwd) =>
+      existsSync(join(cwd, ".qwen", "settings.json")) ||
+      existsSync(join(cwd, ".qwen")),
+    transformConfig: (_name, config) => transformQwenCodeServerConfig(config),
+  },
+  // https://docs.trae.ai/ide/add-mcp-servers?_lang=en
+  trae: {
+    name: "trae",
+    displayName: "Trae",
+    globalConfigPath: traeConfigPath,
+    projectConfigPath: ".trae/mcp.json",
+    configKey: "mcpServers",
+    format: "jsonc",
+    supportedTransports: ALL_TRANSPORTS,
+    detectGlobalInstall: () =>
+      existsSync(traeConfigPath) ||
+      existsSync(join(home, ".trae", "mcp.json")) ||
+      existsSync(join(home, ".trae")) ||
+      existsSync(traePath) ||
+      existsSync(join(appSupport, "Trae")),
+    detectProjectInstall: (cwd) =>
+      existsSync(join(cwd, ".trae", "mcp.json")) ||
+      existsSync(join(cwd, ".trae")),
+    resolveConfigPath: ({ global: isGlobal, cwd }) => {
+      if (isGlobal) {
+        if (existsSync(join(home, ".trae", "mcp.json"))) {
+          return join(home, ".trae", "mcp.json");
+        }
+        return traeConfigPath;
+      }
+      return join(cwd, ".trae", "mcp.json");
+    },
+    transformConfig: (_name, config) => transformTraeServerConfig(config),
   },
   vscode: {
     name: "vscode",
@@ -265,6 +443,22 @@ export const mcpAgentAliases: Record<string, McpAgentType> = {
   "cline-vscode": "cline",
   gemini: "gemini-cli",
   "github-copilot": "vscode",
+  "grok-cli": "grok",
+  kimi: "kimi-code-cli",
+  "kimi-cli": "kimi-code-cli",
+  "kimi-code": "kimi-code-cli",
+  "kiro-cli": "kiro",
+  "kiro-ide": "kiro",
+  "pi-agent": "pi",
+  "qoder-cli": "qoder",
+  qwen: "qwen-code",
+  "qwen-cli": "qwen-code",
+  qwencode: "qwen-code",
+  "trae-code": "trae",
+  traecode: "trae",
+  "trae-ide": "trae",
+  xai: "grok",
+  "xai-grok": "grok",
 };
 
 export const getMcpAgentConfig = (agentType: McpAgentType): McpAgentConfig => mcpAgents[agentType];

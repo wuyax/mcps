@@ -40,9 +40,17 @@ export const parseServerConfig = (raw: unknown): McpServerConfig => {
   const data = raw as Record<string, unknown>;
 
   // Remote server (HTTP / SSE)
-  if (typeof data.url === "string" && data.url.trim().length > 0) {
+  const rawUrl =
+    typeof data.url === "string" && data.url.trim().length > 0 ? data.url.trim() : undefined;
+  const rawHttpUrl =
+    typeof data.httpUrl === "string" && data.httpUrl.trim().length > 0
+      ? data.httpUrl.trim()
+      : undefined;
+  const remoteUrl = rawHttpUrl ?? rawUrl;
+
+  if (remoteUrl) {
     const transport: McpRemoteTransport =
-      data.type === "sse" || data.type === "http" ? data.type : "http";
+      data.type === "sse" || data.transport === "sse" ? "sse" : "http";
     const headers =
       data.headers && typeof data.headers === "object"
         ? (data.headers as Record<string, string>)
@@ -50,7 +58,7 @@ export const parseServerConfig = (raw: unknown): McpServerConfig => {
 
     return {
       type: transport,
-      url: data.url.trim(),
+      url: remoteUrl,
       headers,
     };
   }

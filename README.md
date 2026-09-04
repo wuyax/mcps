@@ -2,7 +2,7 @@
 
 Cross-platform MCP (Model Context Protocol) server installer and manager for AI coding agents.
 
-Supports **15 agents**, multiple config formats (`json`, `jsonc`, `yaml`, `toml`), and all MCP server types (`remote` HTTP/SSE, `package` via npx, and custom `command` stdio).
+Supports **22 agents**, multiple config formats (`json`, `jsonc`, `yaml`, `toml`), and all MCP server types (`remote` HTTP/SSE, `package` via npx, and custom `command` stdio).
 
 ---
 
@@ -19,10 +19,17 @@ Supports **15 agents**, multiple config formats (`json`, `jsonc`, `yaml`, `toml`
 | **Codex** | `codex` | Project / Global | stdio, http, sse | `toml` |
 | **Cursor** | `cursor` | Project / Global | stdio, http, sse | `jsonc` |
 | **Gemini CLI** | `gemini-cli` | Project / Global | stdio, http, sse | `jsonc` |
+| **Grok** | `grok` | Project / Global | stdio, http, sse | `toml` |
 | **Goose** | `goose` | Project / Global | stdio, http, sse | `yaml` |
 | **GitHub Copilot CLI** | `github-copilot-cli` | Project / Global | stdio, http, sse | `jsonc` |
+| **Kimi Code CLI** | `kimi-code-cli` | Project / Global | stdio, http, sse | `jsonc` |
+| **Kiro** | `kiro` | Project / Global | stdio, http, sse | `jsonc` |
 | **MCPorter** | `mcporter` | Project / Global | stdio, http, sse | `jsonc` |
 | **OpenCode** | `opencode` | Project / Global | stdio, http, sse | `jsonc` |
+| **Pi** | `pi` | Project / Global | stdio, http, sse | `jsonc` |
+| **Qoder** | `qoder` | Project / Global | stdio, http, sse | `jsonc` |
+| **Qwen Code** | `qwen-code` | Project / Global | stdio, http, sse | `jsonc` |
+| **Trae** | `trae` | Project / Global | stdio, http, sse | `jsonc` |
 | **VS Code** | `vscode` | Project / Global | stdio, http, sse | `jsonc` |
 | **Zed** | `zed` | Project / Global | stdio, http, sse | `jsonc` |
 

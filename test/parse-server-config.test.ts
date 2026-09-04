@@ -26,6 +26,40 @@ describe("parseServerConfig & type guards", () => {
     });
   });
 
+  it("should correctly parse and detect a remote server with transport: streamable-http", () => {
+    const raw = {
+      transport: "streamable-http",
+      url: "https://mcp.example.com/mcp",
+    };
+
+    const parsed = parseServerConfig(raw);
+    expect(isRemoteServerConfig(parsed)).toBe(true);
+    expect(isStdioServerConfig(parsed)).toBe(false);
+    expect(parsed).toEqual({
+      type: "http",
+      url: "https://mcp.example.com/mcp",
+      headers: undefined,
+    });
+  });
+
+  it("should correctly parse and detect a remote server configured with httpUrl (e.g. Qwen Code)", () => {
+    const raw = {
+      httpUrl: "https://mcp.example.com/mcp",
+      headers: {
+        Authorization: "Bearer token456",
+      },
+    };
+
+    const parsed = parseServerConfig(raw);
+    expect(isRemoteServerConfig(parsed)).toBe(true);
+    expect(isStdioServerConfig(parsed)).toBe(false);
+    expect(parsed).toEqual({
+      type: "http",
+      url: "https://mcp.example.com/mcp",
+      headers: { Authorization: "Bearer token456" },
+    });
+  });
+
   it("should correctly parse and detect a stdio command server", () => {
     const raw = {
       command: "npx",
