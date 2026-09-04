@@ -2,7 +2,6 @@ import { existsSync } from "node:fs";
 import { homedir, platform } from "node:os";
 import { join } from "node:path";
 
-import { createAgentTransform } from "./transforms/index.ts";
 import type { McpAgentConfig, McpAgentType, McpTransportType } from "./types.ts";
 
 const home = homedir();
@@ -513,12 +512,6 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     transformDialect: "zed",
   },
 };
-
-for (const config of Object.values(mcpAgents)) {
-  if (!config.transformConfig && config.transformDialect) {
-    config.transformConfig = createAgentTransform(config.transformDialect);
-  }
-}
 
 export const mcpAgentAliases: Record<string, McpAgentType> = {
   agy: "antigravity-cli",

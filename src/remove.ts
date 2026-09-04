@@ -10,12 +10,12 @@ export const removeMcpServerFromAgent = (
   options: { global?: boolean; cwd?: string } = {},
 ): RemoveMcpServerResult => {
   const agent = getMcpAgentConfig(agentType);
+  const { target } = agentConfigStore.resolveTarget(agent, options);
 
   try {
-    const { path, removed } = agentConfigStore.removeServer(agent, serverName, options);
-    return { agent: agentType, path, removed };
+    const { removed } = agentConfigStore.removeServer(agent, serverName, options);
+    return { agent: agentType, path: target.configPath, removed };
   } catch (error) {
-    const { target } = agentConfigStore.resolveTarget(agent, options);
     return {
       agent: agentType,
       path: target.configPath,

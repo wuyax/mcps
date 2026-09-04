@@ -152,4 +152,100 @@ describe("Server Config Transform deep module", () => {
       expect(transformServerConfigForAgent(agent, "test", stdioNoEnv)).toEqual(stdioNoEnv);
     });
   });
+
+  describe("named dialects transformation coverage", () => {
+    it("transforms correctly across all supported dialects", () => {
+      // Goose
+      expect(transformServerConfig("srv", remoteHttp, "goose")).toEqual({
+        name: "srv",
+        description: "",
+        type: "streamable_http",
+        uri: remoteHttp.url,
+        headers: remoteHttp.headers,
+        enabled: true,
+        timeout: 300,
+      });
+
+      // Zed
+      expect(transformServerConfig("srv", stdioWithEnv, "zed")).toEqual({
+        source: "custom",
+        command: stdioWithEnv.command,
+        args: stdioWithEnv.args,
+        env: stdioWithEnv.env,
+      });
+
+      // VSCode
+      expect(transformServerConfig("srv", stdioWithEnv, "vscode")).toEqual({
+        type: "stdio",
+        command: stdioWithEnv.command,
+        args: stdioWithEnv.args,
+        env: stdioWithEnv.env,
+      });
+
+      // Augment
+      expect(transformServerConfig("srv", remoteHttp, "augment")).toEqual({
+        type: "http",
+        url: remoteHttp.url,
+        headers: remoteHttp.headers,
+      });
+
+      // Opencode
+      expect(transformServerConfig("srv", stdioWithEnv, "opencode")).toEqual({
+        type: "local",
+        command: [stdioWithEnv.command, ...stdioWithEnv.args!],
+        environment: stdioWithEnv.env,
+        enabled: true,
+      });
+
+      // Pi
+      expect(transformServerConfig("srv", remoteHttp, "pi")).toEqual({
+        transport: "streamable-http",
+        url: remoteHttp.url,
+        headers: remoteHttp.headers,
+      });
+
+      // Cline
+      expect(transformServerConfig("srv", stdioWithEnv, "cline")).toEqual({
+        command: stdioWithEnv.command,
+        args: stdioWithEnv.args,
+        env: stdioWithEnv.env,
+      });
+
+      // Kiro
+      expect(transformServerConfig("srv", remoteHttp, "kiro")).toEqual({
+        url: remoteHttp.url,
+        headers: remoteHttp.headers,
+      });
+
+      // Qwen Code
+      expect(transformServerConfig("srv", remoteHttp, "qwen-code")).toEqual({
+        httpUrl: remoteHttp.url,
+        headers: remoteHttp.headers,
+      });
+
+      // Grok
+      expect(transformServerConfig("srv", remoteHttp, "grok")).toEqual({
+        url: remoteHttp.url,
+        headers: remoteHttp.headers,
+      });
+
+      // Trae
+      expect(transformServerConfig("srv", remoteHttp, "trae")).toEqual({
+        url: remoteHttp.url,
+        headers: remoteHttp.headers,
+      });
+
+      // Amp
+      expect(transformServerConfig("srv", remoteHttp, "amp")).toEqual({
+        url: remoteHttp.url,
+        headers: remoteHttp.headers,
+      });
+
+      // Kimi Code
+      expect(transformServerConfig("srv", remoteHttp, "kimi-code")).toEqual({
+        url: remoteHttp.url,
+        headers: remoteHttp.headers,
+      });
+    });
+  });
 });

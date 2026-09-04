@@ -116,12 +116,24 @@ export const mcpAddCommand = new Command("add")
         logger.info(
           `Detected ${isGlobal ? "global" : "project"} agents: ${pc.cyan(formatAgentList(resolvedTargets.detected, "(none detected)"))}`,
         );
+        if (resolvedTargets.incompatible.length > 0) {
+          const skippedList = resolvedTargets.incompatible
+            .map((item) => `${item.agent} (${item.reason})`)
+            .join(", ");
+          logger.info(
+            `Skipping detected agents incompatible with ${transport}: ${pc.yellow(skippedList)}`,
+          );
+        }
       }
+
+      const targetAgents = resolvedTargets.isDetected
+        ? resolvedTargets.agents
+        : resolvedTargets.allAgents;
 
       const result = installMcpServer({
         source,
         name: options.name,
-        agents: resolvedTargets.allAgents,
+        agents: targetAgents,
         args: options.args,
         global: isGlobal,
         cwd,

@@ -2,12 +2,11 @@ import { checkbox, select } from "@inquirer/prompts";
 import pc from "picocolors";
 
 import {
-  detectGloballyInstalledMcpAgents,
-  detectProjectInstalledMcpAgents,
   getMcpAgentConfig,
   getMcpAgentsSupportingProjectScope,
   getMcpAgentTypes,
 } from "../../agents.ts";
+import { resolveTargetAgents } from "../../resolve-target-agents.ts";
 import type { McpAgentType, McpScopeOptions } from "../../types.ts";
 import { logger } from "../../utils/logger.ts";
 
@@ -38,10 +37,12 @@ export const promptScopeAndAgents = async (
     message: "Select MCP installation scope:",
   });
 
-  // Detect agents based on chosen scope
-  const detected = isGlobal
-    ? detectGloballyInstalledMcpAgents()
-    : detectProjectInstalledMcpAgents(cwd);
+  // Detect agents based on chosen scope using Target Agent Resolver
+  const resolution = resolveTargetAgents({
+    global: isGlobal,
+    cwd,
+  });
+  const detected = resolution.detected;
 
   const availableAgentTypes = isGlobal
     ? getMcpAgentTypes()

@@ -72,4 +72,15 @@ describe("resolveTargetAgents", () => {
     expect(result.incompatible).toHaveLength(1);
     expect(result.diagnostic).toMatch(/None of the selected agents support http transport/);
   });
+
+  it("filters detected agents by transport during auto-detection", () => {
+    const result = resolveTargetAgents({
+      requested: undefined,
+      cwd: "/nonexistent-" + Date.now(),
+      transport: "http",
+    });
+
+    expect(result.isDetected).toBe(true);
+    expect(result.agents).toEqual([]);
+  });
 });

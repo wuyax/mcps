@@ -19,15 +19,15 @@ export const installMcpServerForAgent = (
 ): McpInstallResultForAgent => {
   const agent = getMcpAgentConfig(agentType);
   const isGlobal = options.global ?? false;
+  const { target } = agentConfigStore.resolveTarget(agent, options);
 
   try {
     const transformed = transformServerConfigForAgent(agent, serverName, serverConfig, {
       global: isGlobal,
     });
-    const { path } = agentConfigStore.writeServer(agent, serverName, transformed, options);
-    return { agent: agentType, success: true, path };
+    agentConfigStore.writeServer(agent, serverName, transformed, options);
+    return { agent: agentType, success: true, path: target.configPath };
   } catch (error) {
-    const { target } = agentConfigStore.resolveTarget(agent, options);
     return {
       agent: agentType,
       success: false,

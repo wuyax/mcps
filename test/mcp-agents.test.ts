@@ -207,28 +207,28 @@ describe("mcp agent catalog", () => {
     expect(isMcpAgentType("made-up")).toBe(false);
   });
 
-  it("transformConfig handlers return shapes tied to their agent", () => {
-    expect(typeof mcpAgents.amp.transformConfig).toBe("function");
-    expect(typeof mcpAgents.augment.transformConfig).toBe("function");
-    expect(typeof mcpAgents.cline.transformConfig).toBe("function");
-    expect(typeof mcpAgents["cline-cli"].transformConfig).toBe("function");
-    expect(typeof mcpAgents.goose.transformConfig).toBe("function");
-    expect(typeof mcpAgents.grok.transformConfig).toBe("function");
-    expect(typeof mcpAgents.zed.transformConfig).toBe("function");
-    expect(typeof mcpAgents.codex.transformConfig).toBe("function");
-    expect(typeof mcpAgents.opencode.transformConfig).toBe("function");
-    expect(typeof mcpAgents.pi.transformConfig).toBe("function");
-    expect(typeof mcpAgents["kimi-code-cli"].transformConfig).toBe("function");
-    expect(typeof mcpAgents.kiro.transformConfig).toBe("function");
-    expect(typeof mcpAgents["qwen-code"].transformConfig).toBe("function");
-    expect(typeof mcpAgents.trae.transformConfig).toBe("function");
-    expect(typeof mcpAgents.vscode.transformConfig).toBe("function");
-    expect(typeof mcpAgents["github-copilot-cli"].transformConfig).toBe("function");
+  it("agents declare their expected transformDialect", () => {
+    expect(mcpAgents.amp.transformDialect).toBe("amp");
+    expect(mcpAgents.augment.transformDialect).toBe("augment");
+    expect(mcpAgents.cline.transformDialect).toBe("cline");
+    expect(mcpAgents["cline-cli"].transformDialect).toBe("cline");
+    expect(mcpAgents.goose.transformDialect).toBe("goose");
+    expect(mcpAgents.grok.transformDialect).toBe("grok");
+    expect(mcpAgents.zed.transformDialect).toBe("zed");
+    expect(mcpAgents.codex.transformDialect).toBe("augment");
+    expect(mcpAgents.opencode.transformDialect).toBe("opencode");
+    expect(mcpAgents.pi.transformDialect).toBe("pi");
+    expect(mcpAgents["kimi-code-cli"].transformDialect).toBe("kimi-code");
+    expect(mcpAgents.kiro.transformDialect).toBe("kiro");
+    expect(mcpAgents["qwen-code"].transformDialect).toBe("qwen-code");
+    expect(mcpAgents.trae.transformDialect).toBe("trae");
+    expect(mcpAgents.vscode.transformDialect).toBe("vscode");
+    expect(mcpAgents["github-copilot-cli"].transformDialect).toBe("vscode");
 
-    expect(mcpAgents.qoder.transformConfig).toBeUndefined();
-    expect(mcpAgents.cursor.transformConfig).toBeUndefined();
-    expect(mcpAgents.antigravity.transformConfig).toBeUndefined();
-    expect(mcpAgents["antigravity-cli"].transformConfig).toBeUndefined();
-    expect(mcpAgents["claude-code"].transformConfig).toBeUndefined();
+    expect(mcpAgents.qoder.transformDialect).toBeUndefined();
+    expect(mcpAgents.cursor.transformDialect).toBeUndefined();
+    expect(mcpAgents.antigravity.transformDialect).toBeUndefined();
+    expect(mcpAgents["antigravity-cli"].transformDialect).toBeUndefined();
+    expect(mcpAgents["claude-code"].transformDialect).toBeUndefined();
   });
 });
