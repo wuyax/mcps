@@ -1,38 +1,19 @@
-import {
-  detectGloballyInstalledMcpAgents,
-  detectProjectInstalledMcpAgents,
-  getMcpAgentConfig,
-  isMcpTransportSupported,
-} from "./agents.ts";
 import { buildMcpServerConfig } from "./build-server-config.ts";
 import { installMcpServerForAgent } from "./installer.ts";
+import {
+  resolveMcpTargetAgents,
+  resolveTargetAgents,
+  type ResolvedTargetAgents,
+} from "./resolve-target-agents.ts";
 import { parseMcpSource } from "./source-parser.ts";
 import type {
   InstallMcpServerOptions,
   InstallMcpServerResult,
-  McpAgentType,
   McpInstallResultForAgent,
   McpTransportType,
 } from "./types.ts";
 
-export interface ResolvedTargetAgents {
-  agents: McpAgentType[];
-  detected: boolean;
-}
-
-export const resolveMcpTargetAgents = (
-  requested: McpAgentType[] | undefined,
-  isGlobal: boolean,
-  cwd: string,
-): ResolvedTargetAgents => {
-  if (requested && requested.length > 0) {
-    return { agents: requested, detected: false };
-  }
-  const detected = isGlobal
-    ? detectGloballyInstalledMcpAgents()
-    : detectProjectInstalledMcpAgents(cwd);
-  return { agents: detected, detected: true };
-};
+export { resolveMcpTargetAgents, type ResolvedTargetAgents };
 
 export const installMcpServer = (options: InstallMcpServerOptions): InstallMcpServerResult => {
   const parsed = parseMcpSource(options.source);
@@ -50,20 +31,26 @@ export const installMcpServer = (options: InstallMcpServerOptions): InstallMcpSe
   const requestedTransport: McpTransportType =
     parsed.type === "remote" ? (serverConfig.type ?? "http") : "stdio";
 
-  const { agents: targetAgents } = resolveMcpTargetAgents(options.agents, isGlobal, cwd);
+  const { allAgents, incompatible } = resolveTargetAgents({
+    requested: options.agents,
+    global: isGlobal,
+    cwd,
+    transport: requestedTransport,
+  });
 
-  const results: McpInstallResultForAgent[] = targetAgents.map((agentType) => {
-    const agent = getMcpAgentConfig(agentType);
-    if (!isMcpTransportSupported(agent, requestedTransport)) {
+  const incompatibleMap = new Map(incompatible.map((item) => [item.agent, item.reason]));
+
+  const results: McpInstallResultForAgent[] = allAgents.map((agentType) => {
+    const incompatibleReason = incompatibleMap.get(agentType);
+    if (incompatibleReason) {
       return {
         agent: agentType,
         success: false,
         path: "",
-        error:
-          agent.unsupportedTransportMessage ??
-          `${agent.displayName} does not support ${requestedTransport} transport.`,
+        error: incompatibleReason,
       };
     }
+
     return installMcpServerForAgent(serverName, serverConfig, agentType, { global: isGlobal, cwd });
   });
 

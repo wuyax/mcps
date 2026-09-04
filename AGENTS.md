@@ -8,6 +8,7 @@ Repository guidelines, architecture seams, and coding standards for `mcps`.
 - **Interactive Wizards (`src/interactive/`)**: Terminal UI built with `@inquirer/prompts`. Catch `ExitPromptError` for clean Ctrl+C exits. Keep prompt utilities modular under `src/interactive/prompts/`.
 - **Core Orchestration (`src/install-mcp-server.ts`, `src/installer.ts`, `src/remove.ts`, `src/list.ts`)**: Pure functions orchestrating agent detection, config transformation, and persistence.
 - **Agent Config Store (`src/config-store.ts`)**: Unified persistence deep module encapsulating path resolution, existence checking, and multi-format adapters behind a pluggable storage seam.
+- **Target Agent Resolver (`src/resolve-target-agents.ts`)**: Deep module resolving candidate agents from CLI arguments, wildcards, auto-detection, and transport capability constraints.
 - **Format Adapters (`src/formats/`)**: Isolated handlers for JSON, JSONC, YAML, and TOML reading and writing.
 - **Transforms (`src/transforms/`)**: Unified Server Config Transform deep module mapping standard `McpServerConfig` to agent-specific config shapes via declarative dialects.
 

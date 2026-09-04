@@ -2,12 +2,10 @@ import { Command } from "commander";
 import pc from "picocolors";
 
 import {
-  detectGloballyInstalledMcpAgents,
-  detectProjectInstalledMcpAgents,
   getMcpAgentTypes,
   installMcpServer,
   parseMcpSource,
-  type McpAgentType,
+  resolveTargetAgents,
   type McpRemoteTransport,
 } from "../index.ts";
 import { formatAgentList } from "../utils/format-agent-list.ts";
@@ -52,9 +50,6 @@ const resolveTransport = (input: string | undefined): McpRemoteTransport | undef
   throw new Error(`Unsupported transport "${input}" (expected: http, sse)`);
 };
 
-const detectCandidateAgents = (cwd: string, isGlobal: boolean): McpAgentType[] =>
-  isGlobal ? detectGloballyInstalledMcpAgents() : detectProjectInstalledMcpAgents(cwd);
-
 import { wizardAdd } from "../interactive/wizard-add.ts";
 
 export const mcpAddCommand = new Command("add")
@@ -97,27 +92,31 @@ export const mcpAddCommand = new Command("add")
       const cwd = process.cwd();
       const isGlobal = Boolean(options.global);
 
-      let agentTypes = options.all ? getMcpAgentTypes() : parseMcpAgentList(options.agent);
+      const resolvedTargets = resolveTargetAgents({
+        requested: options.agent,
+        all: options.all,
+        global: isGlobal,
+        cwd,
+      });
 
-      if (!agentTypes) {
-        const detected = detectCandidateAgents(cwd, isGlobal);
-        if (detected.length === 0) {
-          logger.warn(
-            `No ${isGlobal ? "global" : "project"}-installed MCP agents detected. Pass ${pc.cyan("-a <agent>")} (e.g. ${pc.cyan("-a cursor")}) or ${pc.cyan("--all")} to install.`,
-          );
-          process.exitCode = 1;
-          return;
-        }
-        agentTypes = detected;
+      if (resolvedTargets.agents.length === 0) {
+        logger.warn(
+          `No ${isGlobal ? "global" : "project"}-installed MCP agents detected. Pass ${pc.cyan("-a <agent>")} (e.g. ${pc.cyan("-a cursor")}) or ${pc.cyan("--all")} to install.`,
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      if (resolvedTargets.isDetected) {
         logger.info(
-          `Detected ${isGlobal ? "global" : "project"} agents: ${pc.cyan(formatAgentList(detected, "(none detected)"))}`,
+          `Detected ${isGlobal ? "global" : "project"} agents: ${pc.cyan(formatAgentList(resolvedTargets.detected, "(none detected)"))}`,
         );
       }
 
       const result = installMcpServer({
         source,
         name: options.name,
-        agents: agentTypes,
+        agents: resolvedTargets.agents,
         args: options.args,
         global: isGlobal,
         cwd,

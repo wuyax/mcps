@@ -41,6 +41,12 @@ export {
   installMcpServer as install,
   resolveMcpTargetAgents,
 } from "./install-mcp-server.ts";
+export {
+  resolveTargetAgents,
+  type IncompatibleAgent,
+  type TargetResolutionQuery,
+  type TargetResolutionResult,
+} from "./resolve-target-agents.ts";
 export { installMcpServerForAgent, installMcpServerForAgents } from "./installer.ts";
 export { resolveMcpConfigTarget } from "./resolve-config-target.ts";
 export { listInstalledMcpServers, listInstalledMcpServers as list } from "./list.ts";
