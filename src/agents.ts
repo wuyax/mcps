@@ -51,8 +51,7 @@ const getPlatformPaths = (): PlatformPaths => {
 
 const { appSupport, vscodePath, gooseConfigPath, zedConfigPath } = getPlatformPaths();
 
-const antigravityConfigPath = join(home, ".gemini", "antigravity", "mcp_config.json");
-const antigravityCliConfigPath = join(home, ".gemini", "config", "mcp_config.json");
+const antigravityMcpConfigPath = join(home, ".gemini", "config", "mcp_config.json");
 const clineCliConfigPath = join(
   process.env.CLINE_DIR || join(home, ".cline"),
   "data",
@@ -77,13 +76,14 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
   antigravity: {
     name: "antigravity",
     displayName: "Antigravity",
-    globalConfigPath: antigravityConfigPath,
+    globalConfigPath: antigravityMcpConfigPath,
     projectConfigPath: ".agents/mcp_config.json",
     configKey: "mcpServers",
     format: "jsonc",
     supportedTransports: ALL_TRANSPORTS,
     detectGlobalInstall: () =>
-      existsSync(antigravityConfigPath) || existsSync(join(home, ".gemini", "antigravity")),
+      existsSync(join(home, ".gemini", "antigravity")) ||
+      existsSync(join(home, ".gemini", "config")),
     detectProjectInstall: (cwd) =>
       existsSync(join(cwd, ".agents", "mcp_config.json")) ||
       existsSync(join(cwd, ".agents")),
@@ -91,14 +91,13 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
   "antigravity-cli": {
     name: "antigravity-cli",
     displayName: "Antigravity CLI",
-    globalConfigPath: antigravityCliConfigPath,
+    globalConfigPath: antigravityMcpConfigPath,
     projectConfigPath: ".agents/mcp_config.json",
     configKey: "mcpServers",
     format: "jsonc",
     supportedTransports: ALL_TRANSPORTS,
     detectGlobalInstall: () =>
-      existsSync(join(home, ".gemini", "antigravity-cli")) ||
-      existsSync(antigravityCliConfigPath),
+      existsSync(join(home, ".gemini", "antigravity-cli")),
     detectProjectInstall: (cwd) =>
       existsSync(join(cwd, ".agents", "mcp_config.json")) ||
       existsSync(join(cwd, ".agents")),
