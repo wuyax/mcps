@@ -2,21 +2,7 @@ import { existsSync } from "node:fs";
 import { homedir, platform } from "node:os";
 import { join } from "node:path";
 
-import { transformAmpServerConfig } from "./transforms/amp.ts";
-import { transformAugmentServerConfig } from "./transforms/augment.ts";
-import { transformClineServerConfig } from "./transforms/cline.ts";
-import { transformCodexServerConfig } from "./transforms/codex.ts";
-import { transformGooseServerConfig } from "./transforms/goose.ts";
-import { transformCopilotCliServerConfig } from "./transforms/copilot-cli.ts";
-import { transformGrokServerConfig } from "./transforms/grok.ts";
-import { transformKimiCodeServerConfig } from "./transforms/kimi-code.ts";
-import { transformKiroServerConfig } from "./transforms/kiro.ts";
-import { transformOpenCodeServerConfig } from "./transforms/opencode.ts";
-import { transformPiServerConfig } from "./transforms/pi.ts";
-import { transformQwenCodeServerConfig } from "./transforms/qwen-code.ts";
-import { transformTraeServerConfig } from "./transforms/trae.ts";
-import { transformVscodeServerConfig } from "./transforms/vscode.ts";
-import { transformZedServerConfig } from "./transforms/zed.ts";
+import { createAgentTransform } from "./transforms/index.ts";
 import type { McpAgentConfig, McpAgentType, McpTransportType } from "./types.ts";
 
 const home = homedir();
@@ -148,7 +134,8 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
       }
       return join(cwd, ".amp", "settings.json");
     },
-    transformConfig: (_name, config) => transformAmpServerConfig(config),
+    transformDialect: "amp",
+    transformConfig: createAgentTransform("amp"),
   },
   antigravity: {
     name: "antigravity",
@@ -208,7 +195,8 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
       }
       return join(cwd, ".augment", "settings.json");
     },
-    transformConfig: (_name, config) => transformAugmentServerConfig(config),
+    transformDialect: "augment",
+    transformConfig: createAgentTransform("augment"),
   },
   cline: {
     name: "cline",
@@ -228,7 +216,8 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
       }
       return join(cwd, ".cline", "mcp.json");
     },
-    transformConfig: (_name, config) => transformClineServerConfig(config),
+    transformDialect: "cline",
+    transformConfig: createAgentTransform("cline"),
   },
   // https://docs.cline.bot/mcp/mcp-overview.md
   "cline-cli": {
@@ -249,7 +238,8 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
       }
       return join(cwd, ".cline", "mcp.json");
     },
-    transformConfig: (_name, config) => transformClineServerConfig(config),
+    transformDialect: "cline",
+    transformConfig: createAgentTransform("cline"),
   },
   // https://code.claude.com/docs/en/mcp-quickstart#edit-mcp-json-directly
   "claude-code": {
@@ -285,7 +275,8 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     supportedTransports: ALL_TRANSPORTS,
     detectGlobalInstall: () => existsSync(process.env.CODEX_HOME?.trim() || join(home, ".codex")),
     detectProjectInstall: (cwd) => existsSync(join(cwd, ".codex", "config.toml")),
-    transformConfig: (_name, config) => transformCodexServerConfig(config),
+    transformDialect: "augment",
+    transformConfig: createAgentTransform("augment"),
   },
   // https://cursor.com/help/customization/mcp
   cursor: {
@@ -325,7 +316,8 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     detectProjectInstall: (cwd) =>
       existsSync(join(cwd, ".grok", "config.toml")) ||
       existsSync(join(cwd, ".grok")),
-    transformConfig: (_name, config) => transformGrokServerConfig(config),
+    transformDialect: "grok",
+    transformConfig: createAgentTransform("grok"),
   },
   // https://goose-docs.ai/docs/guides/config-files/
   goose: {
@@ -338,7 +330,8 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     supportedTransports: ALL_TRANSPORTS,
     detectGlobalInstall: () => existsSync(gooseConfigPath),
     detectProjectInstall: (cwd) => existsSync(join(cwd, ".goose", "config.yaml")),
-    transformConfig: (name, config) => transformGooseServerConfig(name, config),
+    transformDialect: "goose",
+    transformConfig: createAgentTransform("goose"),
   },
   "github-copilot-cli": {
     name: "github-copilot-cli",
@@ -354,7 +347,8 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     detectProjectInstall: (cwd) =>
       existsSync(join(cwd, ".mcp.json")) ||
       existsSync(join(cwd, ".github", "mcp.json")),
-    transformConfig: (_name, config) => transformCopilotCliServerConfig(config),
+    transformDialect: "vscode",
+    transformConfig: createAgentTransform("vscode"),
   },
   // https://www.kimi.com/code/docs/en/kimi-code-cli/customization/mcp.html
   "kimi-code-cli": {
@@ -371,7 +365,8 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     detectProjectInstall: (cwd) =>
       existsSync(join(cwd, ".kimi-code", "mcp.json")) ||
       existsSync(join(cwd, ".kimi-code")),
-    transformConfig: (_name, config) => transformKimiCodeServerConfig(config),
+    transformDialect: "kimi-code",
+    transformConfig: createAgentTransform("kimi-code"),
   },
   // https://kiro.dev/docs/mcp/configuration.md
   kiro: {
@@ -388,7 +383,8 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     detectProjectInstall: (cwd) =>
       existsSync(join(cwd, ".kiro", "settings", "mcp.json")) ||
       existsSync(join(cwd, ".kiro")),
-    transformConfig: (_name, config) => transformKiroServerConfig(config),
+    transformDialect: "kiro",
+    transformConfig: createAgentTransform("kiro"),
   },
   // https://opencode.ai/docs/config/
   opencode: {
@@ -406,7 +402,8 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     detectGlobalInstall: () =>
       existsSync(join(process.env.XDG_CONFIG_HOME || join(home, ".config"), "opencode")),
     detectProjectInstall: (cwd) => existsSync(join(cwd, "opencode.json")),
-    transformConfig: (_name, config) => transformOpenCodeServerConfig(config),
+    transformDialect: "opencode",
+    transformConfig: createAgentTransform("opencode"),
   },
   // https://pi.dev/packages/pi-mcp-extension
   pi: {
@@ -420,7 +417,8 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     detectGlobalInstall: () => existsSync(join(home, ".pi")),
     detectProjectInstall: (cwd) =>
       existsSync(join(cwd, ".pi", "mcp.json")) || existsSync(join(cwd, ".pi")),
-    transformConfig: (_name, config) => transformPiServerConfig(config),
+    transformDialect: "pi",
+    transformConfig: createAgentTransform("pi"),
   },
   // https://docs.qoder.com/zh/cli/mcp-servers
   qoder: {
@@ -465,7 +463,8 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     detectProjectInstall: (cwd) =>
       existsSync(join(cwd, ".qwen", "settings.json")) ||
       existsSync(join(cwd, ".qwen")),
-    transformConfig: (_name, config) => transformQwenCodeServerConfig(config),
+    transformDialect: "qwen-code",
+    transformConfig: createAgentTransform("qwen-code"),
   },
   // https://docs.trae.ai/ide/add-mcp-servers?_lang=en
   trae: {
@@ -494,7 +493,8 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
       }
       return join(cwd, ".trae", "mcp.json");
     },
-    transformConfig: (_name, config) => transformTraeServerConfig(config),
+    transformDialect: "trae",
+    transformConfig: createAgentTransform("trae"),
   },
   // https://code.visualstudio.com/raw/docs/agents/reference/mcp-configuration.md
   vscode: {
@@ -508,7 +508,8 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     detectGlobalInstall: () =>
       existsSync(join(vscodePath, "mcp.json")) || existsSync(vscodePath),
     detectProjectInstall: (cwd) => existsSync(join(cwd, ".vscode", "mcp.json")),
-    transformConfig: (_name, config) => transformVscodeServerConfig(config),
+    transformDialect: "vscode",
+    transformConfig: createAgentTransform("vscode"),
   },
   // https://zed.dev/docs/ai/mcp
   zed: {
@@ -524,7 +525,8 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
       existsSync(join(process.env.XDG_CONFIG_HOME || join(home, ".config"), "zed")) ||
       existsSync(join(appSupport, "Zed")),
     detectProjectInstall: (cwd) => existsSync(join(cwd, ".zed", "settings.json")),
-    transformConfig: (_name, config) => transformZedServerConfig(config),
+    transformDialect: "zed",
+    transformConfig: createAgentTransform("zed"),
   },
 };
 

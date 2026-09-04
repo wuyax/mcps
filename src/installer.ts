@@ -2,6 +2,7 @@ import { toErrorMessage } from "./utils/to-error-message.ts";
 import { getMcpAgentConfig } from "./agents.ts";
 import { writeServerToConfigFile } from "./formats/index.ts";
 import { resolveMcpConfigTarget } from "./resolve-config-target.ts";
+import { transformServerConfigForAgent } from "./transforms/index.ts";
 import type {
   McpAgentType,
   McpInstallResultForAgent,
@@ -22,9 +23,9 @@ export const installMcpServerForAgent = (
   const isGlobal = options.global ?? false;
 
   try {
-    const transformed = agent.transformConfig
-      ? agent.transformConfig(serverName, serverConfig, { global: isGlobal })
-      : serverConfig;
+    const transformed = transformServerConfigForAgent(agent, serverName, serverConfig, {
+      global: isGlobal,
+    });
 
     writeServerToConfigFile(configPath, agent.format, configKey, serverName, transformed);
     return { agent: agentType, success: true, path: configPath };

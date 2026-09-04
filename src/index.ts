@@ -56,6 +56,12 @@ export {
   type GroupedInstalledServer,
 } from "./interactive/utils/group-installed-servers.ts";
 
+export {
+  createAgentTransform,
+  transformServerConfig,
+  transformServerConfigForAgent,
+} from "./transforms/index.ts";
+
 export type {
   InstallMcpServerOptions,
   InstallMcpServerResult,
@@ -72,4 +78,7 @@ export type {
   ParsedMcpSource,
   RemoveMcpServerOptions,
   RemoveMcpServerResult,
+  ServerConfigDialect,
+  ServerConfigDialectName,
+  ServerConfigDialectOptions,
 } from "./types.ts";

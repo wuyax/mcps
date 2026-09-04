@@ -46,6 +46,48 @@ export interface McpServerConfig {
   env?: Record<string, string>;
 }
 
+export type ServerConfigDialectName =
+  | "vscode"
+  | "augment"
+  | "amp"
+  | "trae"
+  | "grok"
+  | "cline"
+  | "goose"
+  | "kimi-code"
+  | "kiro"
+  | "opencode"
+  | "pi"
+  | "qwen-code"
+  | "zed";
+
+export interface ServerConfigDialectOptions {
+  stdioTransport?: "none" | "type-stdio" | "transport-stdio" | "type-local";
+  remoteTransport?:
+    | "type-http-sse"
+    | "sse-only-type"
+    | "sse-only-transport"
+    | "none"
+    | "streamable-http"
+    | "streamableHttp"
+    | "streamable_http"
+    | "remote-type"
+    | "qwen";
+  commandArray?: boolean;
+  commandField?: string;
+  argsField?: string;
+  envField?: string;
+  urlField?: string;
+  defaultEnvEmpty?: boolean;
+  defaultHeadersEmpty?: boolean;
+  wrapper?: Record<string, unknown>;
+  extraFields?: Record<string, unknown>;
+  includeServerName?: boolean;
+  timeoutSeconds?: number;
+}
+
+export type ServerConfigDialect = ServerConfigDialectName | ServerConfigDialectOptions;
+
 export interface McpAgentConfig {
   name: McpAgentType;
   displayName: string;
@@ -59,6 +101,7 @@ export interface McpAgentConfig {
   detectGlobalInstall: () => boolean;
   detectProjectInstall?: (cwd: string) => boolean;
   resolveConfigPath?: (options: { global: boolean; cwd: string }) => string;
+  transformDialect?: ServerConfigDialect;
   transformConfig?: (
     serverName: string,
     config: McpServerConfig,
