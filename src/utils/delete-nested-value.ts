@@ -11,6 +11,12 @@ export const deleteNestedValue = (
   dottedKey: string,
 ): boolean => {
   if (!target) return false;
+  if (dottedKey in target) {
+    if (DANGEROUS_KEY_SEGMENTS.has(dottedKey)) return false;
+    delete target[dottedKey];
+    return true;
+  }
+
   const segments = dottedKey.split(".");
   if (segments.some((segment) => DANGEROUS_KEY_SEGMENTS.has(segment))) return false;
 

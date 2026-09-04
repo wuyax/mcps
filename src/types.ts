@@ -1,6 +1,8 @@
 export type McpAgentType =
+  | "amp"
   | "antigravity"
   | "antigravity-cli"
+  | "augment"
   | "cline"
   | "cline-cli"
   | "claude-code"

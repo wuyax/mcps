@@ -98,6 +98,32 @@ describe("removeServerFromConfigFile: JSONC", () => {
     writeFileSync(filePath, "   \n", "utf-8");
     expect(removeServerFromConfigFile(filePath, "jsonc", "mcpServers", "neon")).toBe(false);
   });
+
+  it("removes a server from a flat key containing dots (e.g. amp.mcpServers)", () => {
+    const filePath = join(tempDir, "settings.json");
+    writeFileSync(
+      filePath,
+      JSON.stringify(
+        {
+          "amp.mcpServers": {
+            neon: { url: "https://mcp.neon.tech/mcp" },
+            github: { command: "npx", args: ["-y", "mcp-server-github"] },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const removed = removeServerFromConfigFile(filePath, "jsonc", "amp.mcpServers", "neon");
+    expect(removed).toBe(true);
+
+    const parsed = parseJsonc(readFileSync(filePath, "utf-8")) as {
+      "amp.mcpServers": Record<string, unknown>;
+    };
+    expect(parsed["amp.mcpServers"].neon).toBeUndefined();
+    expect(parsed["amp.mcpServers"].github).toMatchObject({ command: "npx" });
+  });
 });
 
 describe("removeServerFromConfigFile: YAML", () => {

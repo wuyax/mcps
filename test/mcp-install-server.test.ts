@@ -5,6 +5,7 @@ import TOML from "@iarna/toml";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { installMcpServer, resolveMcpTargetAgents } from "../src/install-mcp-server.ts";
+import { listInstalledMcpServers } from "../src/list.ts";
 
 describe("resolveMcpTargetAgents", () => {
   it("returns the requested agents verbatim and marks detected=false", () => {
@@ -357,6 +358,153 @@ describe("installMcpServer", () => {
       args: ["-y", "@modelcontextprotocol/server-github"],
       env: { API_Key: "value" },
     });
+  });
+
+  it("installs remote and stdio servers to amp in .amp/settings.json", () => {
+    const remoteResult = installMcpServer({
+      source: "https://mcp.linear.app/sse",
+      name: "linear",
+      agents: ["amp"],
+      headers: { Authorization: "Bearer tok" },
+      cwd,
+    });
+    expect(remoteResult.results[0].success).toBe(true);
+    expect(remoteResult.results[0].path).toBe(join(cwd, ".amp", "settings.json"));
+
+    const stdioResult = installMcpServer({
+      source: "@playwright/mcp@latest",
+      name: "playwright",
+      args: ["--headless"],
+      env: { BROWSER: "chromium" },
+      agents: ["amp"],
+      cwd,
+    });
+    expect(stdioResult.results[0].success).toBe(true);
+
+    const file = JSON.parse(
+      readFileSync(join(cwd, ".amp", "settings.json"), "utf-8"),
+    ) as {
+      "amp.mcpServers": Record<string, unknown>;
+    };
+    expect(file["amp.mcpServers"].linear).toEqual({
+      url: "https://mcp.linear.app/sse",
+      headers: { Authorization: "Bearer tok" },
+    });
+    expect(file["amp.mcpServers"].playwright).toEqual({
+      command: "npx",
+      args: ["-y", "@playwright/mcp@latest", "--headless"],
+      env: { BROWSER: "chromium" },
+    });
+
+    const listed = listInstalledMcpServers({ cwd, agents: ["amp"] });
+    expect(listed).toHaveLength(2);
+    expect(listed.map((s) => s.serverName)).toEqual(["linear", "playwright"]);
+    expect(listed[0].serverConfig).toEqual({
+      type: "http",
+      url: "https://mcp.linear.app/sse",
+      headers: { Authorization: "Bearer tok" },
+    });
+    expect(listed[1].serverConfig).toEqual({
+      command: "npx",
+      args: ["-y", "@playwright/mcp@latest", "--headless"],
+      env: { BROWSER: "chromium" },
+    });
+  });
+
+  it("installs remote and stdio servers to augment in .augment/settings.json", () => {
+    const remoteResult = installMcpServer({
+      source: "https://mcp.context7.com/mcp",
+      name: "context7",
+      agents: ["augment"],
+      headers: { CONTEXT7_API_KEY: "my_key" },
+      cwd,
+    });
+    expect(remoteResult.results[0].success).toBe(true);
+    expect(remoteResult.results[0].path).toBe(join(cwd, ".augment", "settings.json"));
+
+    const stdioResult = installMcpServer({
+      source: "custom-mcp",
+      name: "local-tool",
+      args: ["--serve", "--port", "3000"],
+      env: { DEBUG: "true" },
+      agents: ["augment"],
+      cwd,
+    });
+    expect(stdioResult.results[0].success).toBe(true);
+
+    const file = JSON.parse(
+      readFileSync(join(cwd, ".augment", "settings.json"), "utf-8"),
+    ) as {
+      mcpServers: Record<string, unknown>;
+    };
+    expect(file.mcpServers.context7).toEqual({
+      type: "http",
+      url: "https://mcp.context7.com/mcp",
+      headers: { CONTEXT7_API_KEY: "my_key" },
+    });
+    expect(file.mcpServers["local-tool"]).toEqual({
+      command: "npx",
+      args: ["-y", "custom-mcp", "--serve", "--port", "3000"],
+      env: { DEBUG: "true" },
+    });
+
+    const listed = listInstalledMcpServers({ cwd, agents: ["augment"] });
+    expect(listed).toHaveLength(2);
+    expect(listed.map((s) => s.serverName)).toEqual(["context7", "local-tool"]);
+  });
+
+  it("installs remote and stdio servers to cline in .cline/mcp.json with streamableHttp", () => {
+    const remoteResult = installMcpServer({
+      source: "https://example.com/mcp",
+      name: "remote-server",
+      agents: ["cline"],
+      headers: { Authorization: "Bearer your-token" },
+      cwd,
+    });
+    expect(remoteResult.results[0].success).toBe(true);
+    expect(remoteResult.results[0].path).toBe(join(cwd, ".cline", "mcp.json"));
+
+    const sseResult = installMcpServer({
+      source: "https://example.com/sse",
+      name: "sse-server",
+      transport: "sse",
+      agents: ["cline-cli"],
+      cwd,
+    });
+    expect(sseResult.results[0].success).toBe(true);
+
+    const stdioResult = installMcpServer({
+      source: "node",
+      name: "local-server",
+      args: ["/path/to/server.js"],
+      env: { API_KEY: "your_api_key" },
+      agents: ["cline"],
+      cwd,
+    });
+    expect(stdioResult.results[0].success).toBe(true);
+
+    const file = JSON.parse(
+      readFileSync(join(cwd, ".cline", "mcp.json"), "utf-8"),
+    ) as {
+      mcpServers: Record<string, unknown>;
+    };
+    expect(file.mcpServers["remote-server"]).toEqual({
+      type: "streamableHttp",
+      url: "https://example.com/mcp",
+      headers: { Authorization: "Bearer your-token" },
+    });
+    expect(file.mcpServers["sse-server"]).toEqual({
+      type: "sse",
+      url: "https://example.com/sse",
+    });
+    expect(file.mcpServers["local-server"]).toEqual({
+      command: "npx",
+      args: ["-y", "node", "/path/to/server.js"],
+      env: { API_KEY: "your_api_key" },
+    });
+
+    const listed = listInstalledMcpServers({ cwd, agents: ["cline"] });
+    expect(listed).toHaveLength(3);
   });
 });
 

@@ -5,6 +5,7 @@ export const getNestedValue = (
   dottedKey: string,
 ): unknown => {
   if (!source) return undefined;
+  if (dottedKey in source) return source[dottedKey];
   const segments = dottedKey.split(".");
   let cursor: unknown = source;
 

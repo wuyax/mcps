@@ -11,8 +11,10 @@ import {
 } from "../src/agents.ts";
 
 const EXPECTED_AGENTS = [
+  "amp",
   "antigravity",
   "antigravity-cli",
+  "augment",
   "cline",
   "cline-cli",
   "claude-code",
@@ -36,7 +38,7 @@ const EXPECTED_AGENTS = [
 ] as const;
 
 describe("mcp agent catalog", () => {
-  it("enumerates all 22 agents", () => {
+  it("enumerates all 24 agents", () => {
     const types = getMcpAgentTypes();
     expect(types).toHaveLength(EXPECTED_AGENTS.length);
     for (const expected of EXPECTED_AGENTS) {
@@ -60,8 +62,12 @@ describe("mcp agent catalog", () => {
   it("flags project-capable agents", () => {
     const projectAgents = getMcpAgentsSupportingProjectScope();
     for (const expected of [
+      "amp",
       "antigravity",
       "antigravity-cli",
+      "augment",
+      "cline",
+      "cline-cli",
       "claude-code",
       "cursor",
       "codex",
@@ -92,6 +98,12 @@ describe("mcp agent catalog", () => {
   });
 
   it("isMcpTransportSupported reflects supportedTransports", () => {
+    expect(isMcpTransportSupported(mcpAgents.amp, "http")).toBe(true);
+    expect(isMcpTransportSupported(mcpAgents.amp, "sse")).toBe(true);
+    expect(isMcpTransportSupported(mcpAgents.amp, "stdio")).toBe(true);
+    expect(isMcpTransportSupported(mcpAgents.augment, "http")).toBe(true);
+    expect(isMcpTransportSupported(mcpAgents.augment, "sse")).toBe(true);
+    expect(isMcpTransportSupported(mcpAgents.augment, "stdio")).toBe(true);
     expect(isMcpTransportSupported(mcpAgents.cursor, "http")).toBe(true);
     expect(isMcpTransportSupported(mcpAgents.cursor, "sse")).toBe(true);
     expect(isMcpTransportSupported(mcpAgents.cursor, "stdio")).toBe(true);
@@ -123,6 +135,12 @@ describe("mcp agent catalog", () => {
 
   it("resolves aliases", () => {
     expect(mcpAgentAliases.agy).toBe("antigravity-cli");
+    expect(mcpAgentAliases["amp-cli"]).toBe("amp");
+    expect(mcpAgentAliases["amp-code"]).toBe("amp");
+    expect(mcpAgentAliases.ampcode).toBe("amp");
+    expect(mcpAgentAliases.auggie).toBe("augment");
+    expect(mcpAgentAliases["augment-code"]).toBe("augment");
+    expect(mcpAgentAliases.augmentcode).toBe("augment");
     expect(mcpAgentAliases.gemini).toBe("gemini-cli");
     expect(mcpAgentAliases["cline-vscode"]).toBe("cline");
     expect(mcpAgentAliases["pi-agent"]).toBe("pi");
@@ -142,6 +160,14 @@ describe("mcp agent catalog", () => {
     expect(mcpAgentAliases.traecode).toBe("trae");
     expect(mcpAgentAliases["trae-ide"]).toBe("trae");
     expect(resolveMcpAgentAlias("agy")).toBe("antigravity-cli");
+    expect(resolveMcpAgentAlias("amp-cli")).toBe("amp");
+    expect(resolveMcpAgentAlias("amp-code")).toBe("amp");
+    expect(resolveMcpAgentAlias("ampcode")).toBe("amp");
+    expect(resolveMcpAgentAlias("amp")).toBe("amp");
+    expect(resolveMcpAgentAlias("auggie")).toBe("augment");
+    expect(resolveMcpAgentAlias("augment-code")).toBe("augment");
+    expect(resolveMcpAgentAlias("augmentcode")).toBe("augment");
+    expect(resolveMcpAgentAlias("augment")).toBe("augment");
     expect(resolveMcpAgentAlias("gemini")).toBe("gemini-cli");
     expect(resolveMcpAgentAlias("cline-vscode")).toBe("cline");
     expect(resolveMcpAgentAlias("pi-agent")).toBe("pi");
@@ -169,6 +195,8 @@ describe("mcp agent catalog", () => {
   });
 
   it("exposes a type-narrowing guard", () => {
+    expect(isMcpAgentType("amp")).toBe(true);
+    expect(isMcpAgentType("augment")).toBe(true);
     expect(isMcpAgentType("cursor")).toBe(true);
     expect(isMcpAgentType("grok")).toBe(true);
     expect(isMcpAgentType("kiro")).toBe(true);
@@ -182,6 +210,10 @@ describe("mcp agent catalog", () => {
   });
 
   it("transformConfig handlers return shapes tied to their agent", () => {
+    expect(typeof mcpAgents.amp.transformConfig).toBe("function");
+    expect(typeof mcpAgents.augment.transformConfig).toBe("function");
+    expect(typeof mcpAgents.cline.transformConfig).toBe("function");
+    expect(typeof mcpAgents["cline-cli"].transformConfig).toBe("function");
     expect(typeof mcpAgents.goose.transformConfig).toBe("function");
     expect(typeof mcpAgents.grok.transformConfig).toBe("function");
     expect(typeof mcpAgents.zed.transformConfig).toBe("function");

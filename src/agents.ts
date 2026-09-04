@@ -2,6 +2,9 @@ import { existsSync } from "node:fs";
 import { homedir, platform } from "node:os";
 import { join } from "node:path";
 
+import { transformAmpServerConfig } from "./transforms/amp.ts";
+import { transformAugmentServerConfig } from "./transforms/augment.ts";
+import { transformClineServerConfig } from "./transforms/cline.ts";
 import { transformCodexServerConfig } from "./transforms/codex.ts";
 import { transformGooseServerConfig } from "./transforms/goose.ts";
 import { transformGrokServerConfig } from "./transforms/grok.ts";
@@ -61,13 +64,24 @@ const getPlatformPaths = (): PlatformPaths => {
 
 const { appSupport, vscodePath, traePath, gooseConfigPath, zedConfigPath } = getPlatformPaths();
 
+const ampConfigDir =
+  process.env.AMP_HOME?.trim() ||
+  join(process.env.XDG_CONFIG_HOME || join(home, ".config"), "amp");
+const ampGlobalConfigPath = existsSync(join(ampConfigDir, "settings.jsonc"))
+  ? join(ampConfigDir, "settings.jsonc")
+  : join(ampConfigDir, "settings.json");
 const antigravityMcpConfigPath = join(home, ".gemini", "config", "mcp_config.json");
-const clineCliConfigPath = join(
-  process.env.CLINE_DIR || join(home, ".cline"),
-  "data",
-  "settings",
-  "cline_mcp_settings.json",
-);
+const augmentConfigDir =
+  process.env.AUGMENT_HOME?.trim() || join(home, ".augment");
+const augmentGlobalConfigPath = existsSync(join(augmentConfigDir, "settings.jsonc"))
+  ? join(augmentConfigDir, "settings.jsonc")
+  : join(augmentConfigDir, "settings.json");
+const clineDir = process.env.CLINE_DIR || join(home, ".cline");
+const clineCliConfigPath = existsSync(join(clineDir, "mcp.json"))
+  ? join(clineDir, "mcp.json")
+  : existsSync(join(clineDir, "data", "settings", "cline_mcp_settings.json"))
+    ? join(clineDir, "data", "settings", "cline_mcp_settings.json")
+    : join(clineDir, "mcp.json");
 const clineExtensionConfigPath = join(
   vscodePath,
   "globalStorage",
@@ -109,6 +123,36 @@ const traeConfigPath = existsSync(join(home, ".trae", "mcp.json"))
 const ALL_TRANSPORTS: readonly McpTransportType[] = ["stdio", "http", "sse"];
 
 export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
+  // https://ampcode.com/docs/markdown/customize/mcp
+  amp: {
+    name: "amp",
+    displayName: "Amp",
+    globalConfigPath: ampGlobalConfigPath,
+    projectConfigPath: ".amp/settings.json",
+    configKey: "amp.mcpServers",
+    format: "jsonc",
+    supportedTransports: ALL_TRANSPORTS,
+    detectGlobalInstall: () =>
+      existsSync(ampConfigDir) ||
+      existsSync(join(home, ".amp")),
+    detectProjectInstall: (cwd) =>
+      existsSync(join(cwd, ".amp", "settings.json")) ||
+      existsSync(join(cwd, ".amp", "settings.jsonc")) ||
+      existsSync(join(cwd, ".amp")),
+    resolveConfigPath: ({ global: isGlobal, cwd }) => {
+      if (isGlobal) {
+        if (existsSync(join(ampConfigDir, "settings.jsonc"))) {
+          return join(ampConfigDir, "settings.jsonc");
+        }
+        return ampGlobalConfigPath;
+      }
+      if (existsSync(join(cwd, ".amp", "settings.jsonc"))) {
+        return join(cwd, ".amp", "settings.jsonc");
+      }
+      return join(cwd, ".amp", "settings.json");
+    },
+    transformConfig: (_name, config) => transformAmpServerConfig(config),
+  },
   antigravity: {
     name: "antigravity",
     displayName: "Antigravity",
@@ -139,23 +183,81 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
       existsSync(join(cwd, ".agents", "mcp_config.json")) ||
       existsSync(join(cwd, ".agents")),
   },
+  // https://docs.augmentcode.com/cli/integrations.md
+  augment: {
+    name: "augment",
+    displayName: "Augment",
+    globalConfigPath: augmentGlobalConfigPath,
+    projectConfigPath: ".augment/settings.json",
+    configKey: "mcpServers",
+    format: "jsonc",
+    supportedTransports: ALL_TRANSPORTS,
+    detectGlobalInstall: () =>
+      existsSync(augmentConfigDir) ||
+      existsSync(join(home, ".augment")),
+    detectProjectInstall: (cwd) =>
+      existsSync(join(cwd, ".augment", "settings.json")) ||
+      existsSync(join(cwd, ".augment", "settings.jsonc")) ||
+      existsSync(join(cwd, ".augment")),
+    resolveConfigPath: ({ global: isGlobal, cwd }) => {
+      if (isGlobal) {
+        if (existsSync(join(augmentConfigDir, "settings.jsonc"))) {
+          return join(augmentConfigDir, "settings.jsonc");
+        }
+        return augmentGlobalConfigPath;
+      }
+      if (existsSync(join(cwd, ".augment", "settings.jsonc"))) {
+        return join(cwd, ".augment", "settings.jsonc");
+      }
+      return join(cwd, ".augment", "settings.json");
+    },
+    transformConfig: (_name, config) => transformAugmentServerConfig(config),
+  },
   cline: {
     name: "cline",
     displayName: "Cline (VSCode extension)",
     globalConfigPath: clineExtensionConfigPath,
+    projectConfigPath: ".cline/mcp.json",
     configKey: "mcpServers",
     format: "jsonc",
     supportedTransports: ALL_TRANSPORTS,
     detectGlobalInstall: () => existsSync(clineExtensionConfigPath),
+    detectProjectInstall: (cwd) =>
+      existsSync(join(cwd, ".cline", "mcp.json")) ||
+      existsSync(join(cwd, ".cline")),
+    resolveConfigPath: ({ global: isGlobal, cwd }) => {
+      if (isGlobal) {
+        return clineExtensionConfigPath;
+      }
+      return join(cwd, ".cline", "mcp.json");
+    },
+    transformConfig: (_name, config) => transformClineServerConfig(config),
   },
   "cline-cli": {
     name: "cline-cli",
     displayName: "Cline CLI",
     globalConfigPath: clineCliConfigPath,
+    projectConfigPath: ".cline/mcp.json",
     configKey: "mcpServers",
     format: "jsonc",
     supportedTransports: ALL_TRANSPORTS,
-    detectGlobalInstall: () => existsSync(join(home, ".cline")),
+    detectGlobalInstall: () => existsSync(clineDir),
+    detectProjectInstall: (cwd) =>
+      existsSync(join(cwd, ".cline", "mcp.json")) ||
+      existsSync(join(cwd, ".cline")),
+    resolveConfigPath: ({ global: isGlobal, cwd }) => {
+      if (isGlobal) {
+        if (existsSync(join(clineDir, "mcp.json"))) {
+          return join(clineDir, "mcp.json");
+        }
+        if (existsSync(join(clineDir, "data", "settings", "cline_mcp_settings.json"))) {
+          return join(clineDir, "data", "settings", "cline_mcp_settings.json");
+        }
+        return clineCliConfigPath;
+      }
+      return join(cwd, ".cline", "mcp.json");
+    },
+    transformConfig: (_name, config) => transformClineServerConfig(config),
   },
   // https://code.claude.com/docs/en/mcp-quickstart#edit-mcp-json-directly
   "claude-code": {
@@ -440,6 +542,12 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
 
 export const mcpAgentAliases: Record<string, McpAgentType> = {
   agy: "antigravity-cli",
+  "amp-cli": "amp",
+  "amp-code": "amp",
+  ampcode: "amp",
+  auggie: "augment",
+  "augment-code": "augment",
+  augmentcode: "augment",
   "cline-vscode": "cline",
   gemini: "gemini-cli",
   "github-copilot": "vscode",

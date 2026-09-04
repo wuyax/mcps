@@ -78,4 +78,42 @@ describe("resolveMcpConfigTarget", () => {
     expect(projectTarget.configPath).toBe("/proj/.mcp.json");
     expect(projectTarget.configKey).toBe("mcpServers");
   });
+
+  it("resolves amp target paths for global and project scopes", () => {
+    const globalTarget = resolveMcpConfigTarget(mcpAgents.amp, { global: true });
+    expect(globalTarget.configPath.endsWith(".config/amp/settings.json")).toBe(true);
+    expect(globalTarget.configKey).toBe("amp.mcpServers");
+
+    const projectTarget = resolveMcpConfigTarget(mcpAgents.amp, { global: false, cwd: "/proj" });
+    expect(projectTarget.configPath).toBe("/proj/.amp/settings.json");
+    expect(projectTarget.configKey).toBe("amp.mcpServers");
+  });
+
+  it("resolves augment target paths for global and project scopes", () => {
+    const globalTarget = resolveMcpConfigTarget(mcpAgents.augment, { global: true });
+    expect(globalTarget.configPath.endsWith(".augment/settings.json")).toBe(true);
+    expect(globalTarget.configKey).toBe("mcpServers");
+
+    const projectTarget = resolveMcpConfigTarget(mcpAgents.augment, { global: false, cwd: "/proj" });
+    expect(projectTarget.configPath).toBe("/proj/.augment/settings.json");
+    expect(projectTarget.configKey).toBe("mcpServers");
+  });
+
+  it("resolves cline and cline-cli target paths for global and project scopes", () => {
+    const clineGlobal = resolveMcpConfigTarget(mcpAgents.cline, { global: true });
+    expect(clineGlobal.configPath.endsWith("cline_mcp_settings.json")).toBe(true);
+    expect(clineGlobal.configKey).toBe("mcpServers");
+
+    const clineProject = resolveMcpConfigTarget(mcpAgents.cline, { global: false, cwd: "/proj" });
+    expect(clineProject.configPath).toBe("/proj/.cline/mcp.json");
+    expect(clineProject.configKey).toBe("mcpServers");
+
+    const clineCliGlobal = resolveMcpConfigTarget(mcpAgents["cline-cli"], { global: true });
+    expect(clineCliGlobal.configPath.includes(".cline")).toBe(true);
+    expect(clineCliGlobal.configKey).toBe("mcpServers");
+
+    const clineCliProject = resolveMcpConfigTarget(mcpAgents["cline-cli"], { global: false, cwd: "/proj" });
+    expect(clineCliProject.configPath).toBe("/proj/.cline/mcp.json");
+    expect(clineCliProject.configKey).toBe("mcpServers");
+  });
 });

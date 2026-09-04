@@ -17,6 +17,12 @@ export const setNestedValue = (
   dottedKey: string,
   value: unknown,
 ): void => {
+  if (dottedKey in target) {
+    assertSafeSegment(dottedKey);
+    target[dottedKey] = value;
+    return;
+  }
+
   const segments = dottedKey.split(".");
   let cursor: Record<string, unknown> = target;
 

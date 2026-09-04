@@ -320,6 +320,99 @@ describe("transformConfig: trae", () => {
   });
 });
 
+describe("transformConfig: amp", () => {
+  const transform = mcpAgents.amp.transformConfig!;
 
+  it("maps remote http to url with headers and without type", () => {
+    expect(transform("foo", remote, { global: true })).toEqual({
+      url: remote.url,
+      headers: remote.headers,
+    });
+  });
 
+  it("maps remote sse to url without type", () => {
+    expect(transform("foo", { type: "sse", url: remote.url }, { global: true })).toEqual({
+      url: remote.url,
+    });
+  });
 
+  it("maps stdio to command and args with optional env", () => {
+    expect(transform("foo", stdio, { global: true })).toEqual({
+      command: stdio.command,
+      args: stdio.args,
+      env: stdio.env,
+    });
+
+    const { env: _env, ...stdioNoEnv } = stdio;
+    expect(transform("foo", stdioNoEnv, { global: true })).toEqual({
+      command: stdio.command,
+      args: stdio.args,
+    });
+  });
+});
+
+describe("transformConfig: augment", () => {
+  const transform = mcpAgents.augment.transformConfig!;
+
+  it("maps remote http to type=http with url and headers", () => {
+    expect(transform("foo", remote, { global: true })).toEqual({
+      type: "http",
+      url: remote.url,
+      headers: remote.headers,
+    });
+  });
+
+  it("maps remote sse to type=sse and url", () => {
+    expect(transform("foo", { type: "sse", url: remote.url }, { global: true })).toEqual({
+      type: "sse",
+      url: remote.url,
+    });
+  });
+
+  it("maps stdio to command and args with optional env", () => {
+    expect(transform("foo", stdio, { global: true })).toEqual({
+      command: stdio.command,
+      args: stdio.args,
+      env: stdio.env,
+    });
+
+    const { env: _env, ...stdioNoEnv } = stdio;
+    expect(transform("foo", stdioNoEnv, { global: true })).toEqual({
+      command: stdio.command,
+      args: stdio.args,
+    });
+  });
+});
+
+describe("transformConfig: cline", () => {
+  const transform = mcpAgents.cline.transformConfig!;
+
+  it("maps remote http to type=streamableHttp with url and headers", () => {
+    expect(transform("foo", remote, { global: true })).toEqual({
+      type: "streamableHttp",
+      url: remote.url,
+      headers: remote.headers,
+    });
+  });
+
+  it("maps remote sse to type=sse and url", () => {
+    expect(transform("foo", { type: "sse", url: remote.url }, { global: true })).toEqual({
+      type: "sse",
+      url: remote.url,
+    });
+  });
+
+  it("maps stdio to command and args with optional env", () => {
+    expect(transform("foo", stdio, { global: true })).toEqual({
+      command: stdio.command,
+      args: stdio.args,
+      env: stdio.env,
+    });
+
+    const { env: _env, ...stdioNoEnv } = stdio;
+    expect(transform("foo", stdioNoEnv, { global: true })).toEqual({
+      command: stdio.command,
+      args: stdio.args,
+    });
+  });
+});

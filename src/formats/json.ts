@@ -29,6 +29,15 @@ export const readJsoncConfig = (filePath: string): Record<string, unknown> => {
   return isPlainObject(parsed) ? parsed : {};
 };
 
+const resolvePathPrefix = (root: Record<string, unknown>, dottedKey: string): string[] => {
+  if (dottedKey in root) return [dottedKey];
+  const segments = dottedKey.split(".");
+  if (segments.length > 1 && walkNestedObject(root, segments)) {
+    return segments;
+  }
+  return [dottedKey];
+};
+
 export const setJsoncNestedValue = (
   filePath: string,
   dottedKey: string,
@@ -38,8 +47,10 @@ export const setJsoncNestedValue = (
   ensureParentDir(filePath);
   const existingText = readFileOrEmpty(filePath);
   const sourceText = existingText.trim() ? existingText : "{}";
+  const existing = readJsoncConfig(filePath);
+  const pathPrefix = resolvePathPrefix(existing, dottedKey);
 
-  const path = [...dottedKey.split("."), serverName];
+  const path = [...pathPrefix, serverName];
   const edits = modify(sourceText, path, serverConfig, {
     formattingOptions: JSONC_FORMATTING,
   });
@@ -54,12 +65,17 @@ export const writeJsonConfigAtKey = (
 ): void => {
   ensureParentDir(filePath);
   const existing = readJsoncConfig(filePath);
-  const existingServers = walkNestedObject(existing, dottedKey.split("."));
+  const pathPrefix = resolvePathPrefix(existing, dottedKey);
+  const existingServers = walkNestedObject(existing, pathPrefix);
 
   const servers: Record<string, unknown> = existingServers ? { ...existingServers } : {};
   servers[serverName] = serverConfig;
 
-  setNestedValue(existing, dottedKey, servers);
+  if (pathPrefix.length === 1) {
+    existing[pathPrefix[0]] = servers;
+  } else {
+    setNestedValue(existing, dottedKey, servers);
+  }
   writeFileSync(
     filePath,
     `${JSON.stringify(existing, null, DEFAULT_JSON_INDENT_SPACES)}\n`,
@@ -77,11 +93,11 @@ export const removeJsoncConfigKey = (
   if (!sourceText.trim()) return false;
 
   const existing = readJsoncConfig(filePath);
-  const segments = dottedKey.split(".");
-  const parentObject = walkNestedObject(existing, segments);
+  const pathPrefix = resolvePathPrefix(existing, dottedKey);
+  const parentObject = walkNestedObject(existing, pathPrefix);
   if (!parentObject || !(serverName in parentObject)) return false;
 
-  const path = [...segments, serverName];
+  const path = [...pathPrefix, serverName];
   const edits = modify(sourceText, path, undefined, {
     formattingOptions: JSONC_FORMATTING,
   });
