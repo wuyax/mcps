@@ -2,7 +2,7 @@
 
 Cross-platform MCP (Model Context Protocol) server installer and manager for AI coding agents.
 
-Supports **24 agents**, multiple config formats (`json`, `jsonc`, `yaml`, `toml`), and all MCP server types (`remote` HTTP/SSE, `package` via npx, and custom `command` stdio).
+Supports **23 agents**, multiple config formats (`json`, `jsonc`, `yaml`, `toml`), and all MCP server types (`remote` HTTP/SSE, `package` via npx, and custom `command` stdio).
 
 ---
 
@@ -26,7 +26,6 @@ Supports **24 agents**, multiple config formats (`json`, `jsonc`, `yaml`, `toml`
 | **GitHub Copilot CLI** | `github-copilot-cli` | Project / Global | stdio, http, sse | `jsonc` |
 | **Kimi Code CLI** | `kimi-code-cli` | Project / Global | stdio, http, sse | `jsonc` |
 | **Kiro** | `kiro` | Project / Global | stdio, http, sse | `jsonc` |
-| **MCPorter** | `mcporter` | Project / Global | stdio, http, sse | `jsonc` |
 | **OpenCode** | `opencode` | Project / Global | stdio, http, sse | `jsonc` |
 | **Pi** | `pi` | Project / Global | stdio, http, sse | `jsonc` |
 | **Qoder** | `qoder` | Project / Global | stdio, http, sse | `jsonc` |

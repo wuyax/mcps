@@ -15,7 +15,6 @@ export type McpAgentType =
   | "github-copilot-cli"
   | "kimi-code-cli"
   | "kiro"
-  | "mcporter"
   | "opencode"
   | "pi"
   | "qoder"

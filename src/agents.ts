@@ -7,6 +7,7 @@ import { transformAugmentServerConfig } from "./transforms/augment.ts";
 import { transformClineServerConfig } from "./transforms/cline.ts";
 import { transformCodexServerConfig } from "./transforms/codex.ts";
 import { transformGooseServerConfig } from "./transforms/goose.ts";
+import { transformCopilotCliServerConfig } from "./transforms/copilot-cli.ts";
 import { transformGrokServerConfig } from "./transforms/grok.ts";
 import { transformKimiCodeServerConfig } from "./transforms/kimi-code.ts";
 import { transformKiroServerConfig } from "./transforms/kiro.ts";
@@ -77,11 +78,7 @@ const augmentGlobalConfigPath = existsSync(join(augmentConfigDir, "settings.json
   ? join(augmentConfigDir, "settings.jsonc")
   : join(augmentConfigDir, "settings.json");
 const clineDir = process.env.CLINE_DIR || join(home, ".cline");
-const clineCliConfigPath = existsSync(join(clineDir, "mcp.json"))
-  ? join(clineDir, "mcp.json")
-  : existsSync(join(clineDir, "data", "settings", "cline_mcp_settings.json"))
-    ? join(clineDir, "data", "settings", "cline_mcp_settings.json")
-    : join(clineDir, "mcp.json");
+const clineCliConfigPath = join(clineDir, "mcp.json");
 const clineExtensionConfigPath = join(
   vscodePath,
   "globalStorage",
@@ -233,6 +230,7 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     },
     transformConfig: (_name, config) => transformClineServerConfig(config),
   },
+  // https://docs.cline.bot/mcp/mcp-overview.md
   "cline-cli": {
     name: "cline-cli",
     displayName: "Cline CLI",
@@ -247,12 +245,6 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
       existsSync(join(cwd, ".cline")),
     resolveConfigPath: ({ global: isGlobal, cwd }) => {
       if (isGlobal) {
-        if (existsSync(join(clineDir, "mcp.json"))) {
-          return join(clineDir, "mcp.json");
-        }
-        if (existsSync(join(clineDir, "data", "settings", "cline_mcp_settings.json"))) {
-          return join(clineDir, "data", "settings", "cline_mcp_settings.json");
-        }
         return clineCliConfigPath;
       }
       return join(cwd, ".cline", "mcp.json");
@@ -295,6 +287,7 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     detectProjectInstall: (cwd) => existsSync(join(cwd, ".codex", "config.toml")),
     transformConfig: (_name, config) => transformCodexServerConfig(config),
   },
+  // https://cursor.com/help/customization/mcp
   cursor: {
     name: "cursor",
     displayName: "Cursor",
@@ -334,6 +327,7 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
       existsSync(join(cwd, ".grok")),
     transformConfig: (_name, config) => transformGrokServerConfig(config),
   },
+  // https://goose-docs.ai/docs/guides/config-files/
   goose: {
     name: "goose",
     displayName: "Goose",
@@ -360,6 +354,7 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     detectProjectInstall: (cwd) =>
       existsSync(join(cwd, ".mcp.json")) ||
       existsSync(join(cwd, ".github", "mcp.json")),
+    transformConfig: (_name, config) => transformCopilotCliServerConfig(config),
   },
   // https://www.kimi.com/code/docs/en/kimi-code-cli/customization/mcp.html
   "kimi-code-cli": {
@@ -395,17 +390,7 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
       existsSync(join(cwd, ".kiro")),
     transformConfig: (_name, config) => transformKiroServerConfig(config),
   },
-  mcporter: {
-    name: "mcporter",
-    displayName: "MCPorter",
-    globalConfigPath: join(home, ".mcporter", "mcporter.json"),
-    projectConfigPath: "config/mcporter.json",
-    configKey: "mcpServers",
-    format: "jsonc",
-    supportedTransports: ALL_TRANSPORTS,
-    detectGlobalInstall: () => existsSync(join(home, ".mcporter")),
-    detectProjectInstall: (cwd) => existsSync(join(cwd, "config", "mcporter.json")),
-  },
+  // https://opencode.ai/docs/config/
   opencode: {
     name: "opencode",
     displayName: "OpenCode",
@@ -511,6 +496,7 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     },
     transformConfig: (_name, config) => transformTraeServerConfig(config),
   },
+  // https://code.visualstudio.com/raw/docs/agents/reference/mcp-configuration.md
   vscode: {
     name: "vscode",
     displayName: "VS Code",
@@ -519,10 +505,12 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     configKey: "servers",
     format: "jsonc",
     supportedTransports: ALL_TRANSPORTS,
-    detectGlobalInstall: () => existsSync(join(vscodePath, "mcp.json")),
+    detectGlobalInstall: () =>
+      existsSync(join(vscodePath, "mcp.json")) || existsSync(vscodePath),
     detectProjectInstall: (cwd) => existsSync(join(cwd, ".vscode", "mcp.json")),
     transformConfig: (_name, config) => transformVscodeServerConfig(config),
   },
+  // https://zed.dev/docs/ai/mcp
   zed: {
     name: "zed",
     displayName: "Zed",

@@ -416,3 +416,75 @@ describe("transformConfig: cline", () => {
     });
   });
 });
+
+describe("transformConfig: github-copilot-cli", () => {
+  const transform = mcpAgents["github-copilot-cli"].transformConfig!;
+
+  it("maps remote http to type=http with url and headers", () => {
+    expect(transform("foo", remote, { global: true })).toEqual({
+      type: "http",
+      url: remote.url,
+      headers: remote.headers,
+    });
+  });
+
+  it("maps remote sse to type=sse and url", () => {
+    expect(transform("foo", { type: "sse", url: remote.url }, { global: true })).toEqual({
+      type: "sse",
+      url: remote.url,
+    });
+  });
+
+  it("maps stdio to type=stdio, command, and args with optional env", () => {
+    expect(transform("foo", stdio, { global: true })).toEqual({
+      type: "stdio",
+      command: stdio.command,
+      args: stdio.args,
+      env: stdio.env,
+    });
+
+    const { env: _env, ...stdioNoEnv } = stdio;
+    expect(transform("foo", stdioNoEnv, { global: true })).toEqual({
+      type: "stdio",
+      command: stdio.command,
+      args: stdio.args,
+    });
+  });
+});
+
+describe("transformConfig: vscode", () => {
+  const transform = mcpAgents.vscode.transformConfig!;
+
+  it("maps remote http to type=http with url and headers", () => {
+    expect(transform("foo", remote, { global: true })).toEqual({
+      type: "http",
+      url: remote.url,
+      headers: remote.headers,
+    });
+  });
+
+  it("maps remote sse to type=sse and url", () => {
+    expect(transform("foo", { type: "sse", url: remote.url }, { global: true })).toEqual({
+      type: "sse",
+      url: remote.url,
+    });
+  });
+
+  it("maps stdio to type=stdio, command, and args with optional env", () => {
+    expect(transform("foo", stdio, { global: true })).toEqual({
+      type: "stdio",
+      command: stdio.command,
+      args: stdio.args,
+      env: stdio.env,
+    });
+
+    const { env: _env, ...stdioNoEnv } = stdio;
+    expect(transform("foo", stdioNoEnv, { global: true })).toEqual({
+      type: "stdio",
+      command: stdio.command,
+      args: stdio.args,
+    });
+  });
+});
+
+

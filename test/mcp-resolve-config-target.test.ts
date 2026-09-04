@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { mcpAgents } from "../src/agents.ts";
@@ -109,7 +110,7 @@ describe("resolveMcpConfigTarget", () => {
     expect(clineProject.configKey).toBe("mcpServers");
 
     const clineCliGlobal = resolveMcpConfigTarget(mcpAgents["cline-cli"], { global: true });
-    expect(clineCliGlobal.configPath.includes(".cline")).toBe(true);
+    expect(clineCliGlobal.configPath.endsWith(join(".cline", "mcp.json"))).toBe(true);
     expect(clineCliGlobal.configKey).toBe("mcpServers");
 
     const clineCliProject = resolveMcpConfigTarget(mcpAgents["cline-cli"], { global: false, cwd: "/proj" });

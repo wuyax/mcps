@@ -27,7 +27,6 @@ const EXPECTED_AGENTS = [
   "github-copilot-cli",
   "kimi-code-cli",
   "kiro",
-  "mcporter",
   "opencode",
   "pi",
   "qoder",
@@ -38,7 +37,7 @@ const EXPECTED_AGENTS = [
 ] as const;
 
 describe("mcp agent catalog", () => {
-  it("enumerates all 24 agents", () => {
+  it("enumerates all 23 agents", () => {
     const types = getMcpAgentTypes();
     expect(types).toHaveLength(EXPECTED_AGENTS.length);
     for (const expected of EXPECTED_AGENTS) {
@@ -77,7 +76,6 @@ describe("mcp agent catalog", () => {
       "github-copilot-cli",
       "kimi-code-cli",
       "kiro",
-      "mcporter",
       "opencode",
       "pi",
       "qoder",
@@ -225,12 +223,12 @@ describe("mcp agent catalog", () => {
     expect(typeof mcpAgents["qwen-code"].transformConfig).toBe("function");
     expect(typeof mcpAgents.trae.transformConfig).toBe("function");
     expect(typeof mcpAgents.vscode.transformConfig).toBe("function");
+    expect(typeof mcpAgents["github-copilot-cli"].transformConfig).toBe("function");
 
     expect(mcpAgents.qoder.transformConfig).toBeUndefined();
     expect(mcpAgents.cursor.transformConfig).toBeUndefined();
     expect(mcpAgents.antigravity.transformConfig).toBeUndefined();
     expect(mcpAgents["antigravity-cli"].transformConfig).toBeUndefined();
     expect(mcpAgents["claude-code"].transformConfig).toBeUndefined();
-    expect(mcpAgents["github-copilot-cli"].transformConfig).toBeUndefined();
   });
 });
