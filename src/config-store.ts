@@ -19,26 +19,26 @@ import { getNestedValue } from "./utils/get-nested-value.ts";
 import { isPlainObject } from "./utils/is-plain-object.ts";
 import { setNestedValue } from "./utils/set-nested-value.ts";
 
+export interface ConfigTargetDescriptor {
+  filePath: string;
+  format: McpConfigFormat;
+  dottedKey?: string;
+}
+
 export interface ConfigStoreAdapter {
   exists(filePath: string): boolean;
-  read(filePath: string, format: McpConfigFormat): Record<string, unknown>;
+  read(target: ConfigTargetDescriptor): Record<string, unknown>;
   writeServer(
-    filePath: string,
-    format: McpConfigFormat,
-    dottedKey: string,
+    target: ConfigTargetDescriptor,
     serverName: string,
     serverConfig: unknown,
   ): void;
   removeServer(
-    filePath: string,
-    format: McpConfigFormat,
-    dottedKey: string,
+    target: ConfigTargetDescriptor,
     serverName: string,
   ): boolean;
   listServers(
-    filePath: string,
-    format: McpConfigFormat,
-    dottedKey: string,
+    target: ConfigTargetDescriptor,
   ): Record<string, unknown>;
 }
 
@@ -47,35 +47,45 @@ export class FsConfigStoreAdapter implements ConfigStoreAdapter {
     return existsSync(filePath);
   }
 
-  read(filePath: string, format: McpConfigFormat): Record<string, unknown> {
-    return readConfigFile(filePath, format);
+  read(target: ConfigTargetDescriptor): Record<string, unknown> {
+    return readConfigFile(target.filePath, target.format);
   }
 
   writeServer(
-    filePath: string,
-    format: McpConfigFormat,
-    dottedKey: string,
+    target: ConfigTargetDescriptor,
     serverName: string,
     serverConfig: unknown,
   ): void {
-    writeServerToConfigFile(filePath, format, dottedKey, serverName, serverConfig);
+    if (!target.dottedKey) {
+      throw new Error(`Cannot write server: missing dottedKey for ${target.filePath}`);
+    }
+    writeServerToConfigFile(
+      target.filePath,
+      target.format,
+      target.dottedKey,
+      serverName,
+      serverConfig,
+    );
   }
 
   removeServer(
-    filePath: string,
-    format: McpConfigFormat,
-    dottedKey: string,
+    target: ConfigTargetDescriptor,
     serverName: string,
   ): boolean {
-    return removeServerFromConfigFile(filePath, format, dottedKey, serverName);
+    if (!target.dottedKey) return false;
+    return removeServerFromConfigFile(
+      target.filePath,
+      target.format,
+      target.dottedKey,
+      serverName,
+    );
   }
 
   listServers(
-    filePath: string,
-    format: McpConfigFormat,
-    dottedKey: string,
+    target: ConfigTargetDescriptor,
   ): Record<string, unknown> {
-    return listServersInConfigFile(filePath, format, dottedKey);
+    if (!target.dottedKey) return {};
+    return listServersInConfigFile(target.filePath, target.format, target.dottedKey);
   }
 }
 
@@ -94,49 +104,45 @@ export class MemoryConfigStoreAdapter implements ConfigStoreAdapter {
     return this.files.has(filePath);
   }
 
-  read(filePath: string, _format: McpConfigFormat): Record<string, unknown> {
-    const file = this.files.get(filePath);
+  read(target: ConfigTargetDescriptor): Record<string, unknown> {
+    const file = this.files.get(target.filePath);
     return file ? JSON.parse(JSON.stringify(file)) : {};
   }
 
   writeServer(
-    filePath: string,
-    _format: McpConfigFormat,
-    dottedKey: string,
+    target: ConfigTargetDescriptor,
     serverName: string,
     serverConfig: unknown,
   ): void {
-    const root = this.files.get(filePath) ?? {};
-    const existingServers = getNestedValue(root, dottedKey);
+    if (!target.dottedKey) return;
+    const root = this.files.get(target.filePath) ?? {};
+    const existingServers = getNestedValue(root, target.dottedKey);
     const servers = isPlainObject(existingServers) ? { ...existingServers } : {};
     servers[serverName] = JSON.parse(JSON.stringify(serverConfig));
 
-    setNestedValue(root, dottedKey, servers);
-    this.files.set(filePath, root);
+    setNestedValue(root, target.dottedKey, servers);
+    this.files.set(target.filePath, root);
   }
 
   removeServer(
-    filePath: string,
-    _format: McpConfigFormat,
-    dottedKey: string,
+    target: ConfigTargetDescriptor,
     serverName: string,
   ): boolean {
-    const root = this.files.get(filePath);
+    if (!target.dottedKey) return false;
+    const root = this.files.get(target.filePath);
     if (!root) return false;
 
-    const didRemove = deleteNestedValue(root, `${dottedKey}.${serverName}`);
-    return didRemove;
+    return deleteNestedValue(root, `${target.dottedKey}.${serverName}`);
   }
 
   listServers(
-    filePath: string,
-    _format: McpConfigFormat,
-    dottedKey: string,
+    target: ConfigTargetDescriptor,
   ): Record<string, unknown> {
-    const root = this.files.get(filePath);
+    if (!target.dottedKey) return {};
+    const root = this.files.get(target.filePath);
     if (!root) return {};
 
-    const servers = getNestedValue(root, dottedKey);
+    const servers = getNestedValue(root, target.dottedKey);
     return isPlainObject(servers) ? JSON.parse(JSON.stringify(servers)) : {};
   }
 
@@ -184,21 +190,27 @@ export class AgentConfigStore {
     return { agent: agentConfig, target };
   }
 
+  resolveDescriptor(
+    agent: McpAgentType | McpAgentConfig,
+    options: McpScopeOptions = {},
+  ): ConfigTargetDescriptor {
+    const { agent: agentConfig, target } = this.resolveTarget(agent, options);
+    return {
+      filePath: target.configPath,
+      format: agentConfig.format,
+      dottedKey: target.configKey,
+    };
+  }
+
   writeServer(
     agent: McpAgentType | McpAgentConfig,
     serverName: string,
     serverConfig: unknown,
     options: McpScopeOptions = {},
   ): AgentConfigStoreWriteResult {
-    const { agent: agentConfig, target } = this.resolveTarget(agent, options);
-    this.adapter.writeServer(
-      target.configPath,
-      agentConfig.format,
-      target.configKey,
-      serverName,
-      serverConfig,
-    );
-    return { path: target.configPath };
+    const descriptor = this.resolveDescriptor(agent, options);
+    this.adapter.writeServer(descriptor, serverName, serverConfig);
+    return { path: descriptor.filePath };
   }
 
   removeServer(
@@ -206,35 +218,37 @@ export class AgentConfigStore {
     serverName: string,
     options: McpScopeOptions = {},
   ): AgentConfigStoreRemoveResult {
-    const { agent: agentConfig, target } = this.resolveTarget(agent, options);
-    if (!this.adapter.exists(target.configPath)) {
-      return { path: target.configPath, removed: false };
+    const descriptor = this.resolveDescriptor(agent, options);
+    if (!this.adapter.exists(descriptor.filePath)) {
+      return { path: descriptor.filePath, removed: false };
     }
 
-    const removed = this.adapter.removeServer(
-      target.configPath,
-      agentConfig.format,
-      target.configKey,
-      serverName,
-    );
-    return { path: target.configPath, removed };
+    const removed = this.adapter.removeServer(descriptor, serverName);
+    return { path: descriptor.filePath, removed };
   }
 
   listServers(
     agent: McpAgentType | McpAgentConfig,
     options: McpScopeOptions = {},
   ): AgentConfigStoreListResult {
-    const { agent: agentConfig, target } = this.resolveTarget(agent, options);
-    if (!this.adapter.exists(target.configPath)) {
-      return { path: target.configPath, exists: false, servers: {} };
+    const descriptor = this.resolveDescriptor(agent, options);
+    if (!this.adapter.exists(descriptor.filePath)) {
+      return { path: descriptor.filePath, exists: false, servers: {} };
     }
 
-    const servers = this.adapter.listServers(
-      target.configPath,
-      agentConfig.format,
-      target.configKey,
-    );
-    return { path: target.configPath, exists: true, servers };
+    const servers = this.adapter.listServers(descriptor);
+    return { path: descriptor.filePath, exists: true, servers };
+  }
+
+  read(
+    agent: McpAgentType | McpAgentConfig,
+    options: McpScopeOptions = {},
+  ): Record<string, unknown> {
+    const descriptor = this.resolveDescriptor(agent, options);
+    if (!this.adapter.exists(descriptor.filePath)) {
+      return {};
+    }
+    return this.adapter.read(descriptor);
   }
 
   readServer(

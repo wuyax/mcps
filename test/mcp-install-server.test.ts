@@ -4,29 +4,32 @@ import { join } from "node:path";
 import TOML from "@iarna/toml";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { installMcpServer, resolveMcpTargetAgents } from "../src/install-mcp-server.ts";
+import { installMcpServer } from "../src/install-mcp-server.ts";
 import { listInstalledMcpServers } from "../src/list.ts";
+import { resolveTargetAgents } from "../src/resolve-target-agents.ts";
 
-describe("resolveMcpTargetAgents", () => {
-  it("returns the requested agents verbatim and marks detected=false", () => {
-    const result = resolveMcpTargetAgents(["cursor", "codex"], false, "/cwd");
-    expect(result).toEqual({ agents: ["cursor", "codex"], detected: false });
+describe("resolveTargetAgents via installer suite", () => {
+  it("returns the requested agents verbatim and marks isDetected=false", () => {
+    const result = resolveTargetAgents({ requested: ["cursor", "codex"], global: false, cwd: "/cwd" });
+    expect(result.agents).toEqual(["cursor", "codex"]);
+    expect(result.isDetected).toBe(false);
   });
 
   it("falls back to detection when requested is undefined", () => {
-    const result = resolveMcpTargetAgents(undefined, false, "/nonexistent-path-for-detection");
-    expect(result.detected).toBe(true);
+    const result = resolveTargetAgents({ requested: undefined, global: false, cwd: "/nonexistent-path-for-detection" });
+    expect(result.isDetected).toBe(true);
     expect(Array.isArray(result.agents)).toBe(true);
   });
 
   it("returns an empty detected array when nothing is present", () => {
-    const result = resolveMcpTargetAgents(undefined, false, "/nowhere-" + Date.now());
-    expect(result).toEqual({ agents: [], detected: true });
+    const result = resolveTargetAgents({ requested: undefined, global: false, cwd: "/nowhere-" + Date.now() });
+    expect(result.agents).toEqual([]);
+    expect(result.isDetected).toBe(true);
   });
 
   it("treats an empty array as 'no explicit request' and detects instead", () => {
-    const result = resolveMcpTargetAgents([], false, "/nowhere-" + Date.now());
-    expect(result.detected).toBe(true);
+    const result = resolveTargetAgents({ requested: [], global: false, cwd: "/nowhere-" + Date.now() });
+    expect(result.isDetected).toBe(true);
   });
 });
 

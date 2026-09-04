@@ -91,18 +91,23 @@ export const mcpAddCommand = new Command("add")
       const parsed = parseMcpSource(source);
       const cwd = process.cwd();
       const isGlobal = Boolean(options.global);
+      const explicitTransport = resolveTransport(options.transport);
+      const transport =
+        explicitTransport ?? (parsed.type === "remote" ? "http" : "stdio");
 
       const resolvedTargets = resolveTargetAgents({
         requested: options.agent,
         all: options.all,
         global: isGlobal,
         cwd,
+        transport,
       });
 
       if (resolvedTargets.agents.length === 0) {
-        logger.warn(
-          `No ${isGlobal ? "global" : "project"}-installed MCP agents detected. Pass ${pc.cyan("-a <agent>")} (e.g. ${pc.cyan("-a cursor")}) or ${pc.cyan("--all")} to install.`,
-        );
+        const message =
+          resolvedTargets.diagnostic ??
+          `No ${isGlobal ? "global" : "project"}-installed MCP agents detected. Pass ${pc.cyan("-a <agent>")} (e.g. ${pc.cyan("-a cursor")}) or ${pc.cyan("--all")} to install.`;
+        logger.warn(message);
         process.exitCode = 1;
         return;
       }
@@ -116,11 +121,11 @@ export const mcpAddCommand = new Command("add")
       const result = installMcpServer({
         source,
         name: options.name,
-        agents: resolvedTargets.agents,
+        agents: resolvedTargets.allAgents,
         args: options.args,
         global: isGlobal,
         cwd,
-        transport: resolveTransport(options.transport),
+        transport: explicitTransport,
         headers: parseKeyValueList(options.header, ":"),
         env: parseKeyValueList(options.env, "="),
       });

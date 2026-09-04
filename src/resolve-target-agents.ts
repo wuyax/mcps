@@ -33,11 +33,6 @@ export interface TargetResolutionResult {
   diagnostic?: string;
 }
 
-export interface ResolvedTargetAgents {
-  agents: McpAgentType[];
-  detected: boolean;
-}
-
 const normalizeRequestedAgents = (
   input: string[] | McpAgentType[] | undefined,
 ): McpAgentType[] | undefined => {
@@ -115,24 +110,5 @@ export const resolveTargetAgents = (
     isDetected,
     incompatible,
     diagnostic,
-  };
-};
-
-/**
- * Backward-compatible wrapper for resolveMcpTargetAgents.
- */
-export const resolveMcpTargetAgents = (
-  requested: McpAgentType[] | undefined,
-  isGlobal: boolean,
-  cwd: string,
-): ResolvedTargetAgents => {
-  const result = resolveTargetAgents({
-    requested,
-    global: isGlobal,
-    cwd,
-  });
-  return {
-    agents: result.agents,
-    detected: result.isDetected,
   };
 };

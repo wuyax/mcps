@@ -1,6 +1,7 @@
 import { toErrorMessage } from "./utils/to-error-message.ts";
-import { getMcpAgentConfig, getMcpAgentTypes } from "./agents.ts";
+import { getMcpAgentConfig } from "./agents.ts";
 import { agentConfigStore } from "./config-store.ts";
+import { resolveTargetAgents } from "./resolve-target-agents.ts";
 import type { McpAgentType, RemoveMcpServerOptions, RemoveMcpServerResult } from "./types.ts";
 
 export const removeMcpServerFromAgent = (
@@ -25,10 +26,15 @@ export const removeMcpServerFromAgent = (
 };
 
 export const removeMcpServer = (options: RemoveMcpServerOptions): RemoveMcpServerResult[] => {
-  const agentTypes = options.agents ?? getMcpAgentTypes();
+  const { allAgents } = resolveTargetAgents({
+    requested: options.agents,
+    all: !options.agents,
+    global: options.global,
+    cwd: options.cwd,
+  });
   const results: RemoveMcpServerResult[] = [];
 
-  for (const agentType of agentTypes) {
+  for (const agentType of allAgents) {
     const result = removeMcpServerFromAgent(options.name, agentType, {
       global: options.global,
       cwd: options.cwd,

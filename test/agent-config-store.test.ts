@@ -41,6 +41,17 @@ describe("AgentConfigStore with MemoryConfigStoreAdapter", () => {
     const read = store.readServer("cursor", "test-srv", { cwd: fakeCwd });
     expect(read).toEqual(serverPayload);
 
+    // 4.1 read returns the entire config file object
+    const wholeFile = store.read("cursor", { cwd: fakeCwd });
+    expect(wholeFile).toEqual({
+      mcpServers: {
+        "test-srv": serverPayload,
+      },
+    });
+
+    // 4.2 read on non-existent config returns {}
+    expect(store.read("cursor", { cwd: "/nonexistent-" + Date.now() })).toEqual({});
+
     // 5. readServer on non-existent server returns undefined
     expect(store.readServer("cursor", "unknown-srv", { cwd: fakeCwd })).toBeUndefined();
 
@@ -101,6 +112,11 @@ describe("AgentConfigStore with default FsConfigStoreAdapter", () => {
     const listResult = agentConfigStore.listServers("cursor", { cwd: testDir });
     expect(listResult.exists).toBe(true);
     expect(listResult.servers["fs-srv"]).toEqual({ command: "npx", args: ["-y", "fs-server"] });
+
+    const wholeConfig = agentConfigStore.read("cursor", { cwd: testDir });
+    expect(wholeConfig.mcpServers).toEqual({
+      "fs-srv": { command: "npx", args: ["-y", "fs-server"] },
+    });
 
     const removeResult = agentConfigStore.removeServer("cursor", "fs-srv", { cwd: testDir });
     expect(removeResult.removed).toBe(true);

@@ -1,10 +1,6 @@
 import { buildMcpServerConfig } from "./build-server-config.ts";
 import { installMcpServerForAgent } from "./installer.ts";
-import {
-  resolveMcpTargetAgents,
-  resolveTargetAgents,
-  type ResolvedTargetAgents,
-} from "./resolve-target-agents.ts";
+import { resolveTargetAgents } from "./resolve-target-agents.ts";
 import { parseMcpSource } from "./source-parser.ts";
 import type {
   InstallMcpServerOptions,
@@ -12,8 +8,6 @@ import type {
   McpInstallResultForAgent,
   McpTransportType,
 } from "./types.ts";
-
-export { resolveMcpTargetAgents, type ResolvedTargetAgents };
 
 export const installMcpServer = (options: InstallMcpServerOptions): InstallMcpServerResult => {
   const parsed = parseMcpSource(options.source);

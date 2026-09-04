@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  resolveMcpTargetAgents,
-  resolveTargetAgents,
-} from "../src/resolve-target-agents.ts";
+import { resolveTargetAgents } from "../src/resolve-target-agents.ts";
 import { getMcpAgentTypes } from "../src/agents.ts";
 
 describe("resolveTargetAgents", () => {
@@ -74,19 +71,5 @@ describe("resolveTargetAgents", () => {
     expect(result.agents).toEqual([]);
     expect(result.incompatible).toHaveLength(1);
     expect(result.diagnostic).toMatch(/None of the selected agents support http transport/);
-  });
-
-  describe("resolveMcpTargetAgents backward compatibility wrapper", () => {
-    it("returns expected agents and detected boolean", () => {
-      const explicit = resolveMcpTargetAgents(["cursor", "zed"], false, "/dummy");
-      expect(explicit).toEqual({
-        agents: ["cursor", "zed"],
-        detected: false,
-      });
-
-      const detected = resolveMcpTargetAgents(undefined, false, "/nonexistent-" + Date.now());
-      expect(detected.detected).toBe(true);
-      expect(Array.isArray(detected.agents)).toBe(true);
-    });
   });
 });

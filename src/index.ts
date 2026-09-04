@@ -28,18 +28,16 @@ export {
 export {
   AgentConfigStore,
   agentConfigStore,
-  FsConfigStoreAdapter,
-  MemoryConfigStoreAdapter,
   type AgentConfigStoreListResult,
   type AgentConfigStoreRemoveResult,
   type AgentConfigStoreWriteResult,
   type ConfigStoreAdapter,
+  type ConfigTargetDescriptor,
 } from "./config-store.ts";
 export {
   installMcpServer,
   installMcpServer as add,
   installMcpServer as install,
-  resolveMcpTargetAgents,
 } from "./install-mcp-server.ts";
 export {
   resolveTargetAgents,
