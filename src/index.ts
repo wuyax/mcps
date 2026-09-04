@@ -26,6 +26,16 @@ export {
   writeServerToConfigFile,
 } from "./formats/index.ts";
 export {
+  AgentConfigStore,
+  agentConfigStore,
+  FsConfigStoreAdapter,
+  MemoryConfigStoreAdapter,
+  type AgentConfigStoreListResult,
+  type AgentConfigStoreRemoveResult,
+  type AgentConfigStoreWriteResult,
+  type ConfigStoreAdapter,
+} from "./config-store.ts";
+export {
   installMcpServer,
   installMcpServer as add,
   installMcpServer as install,

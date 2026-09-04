@@ -19,3 +19,7 @@ _Avoid_: Transform schema, config template, adapter type
 **Scope**:
 The target visibility level for an Agent's configuration, either global (user-level home directory) or project-level (current working directory).
 _Avoid_: Target mode, installation level
+
+**Agent Config Store**:
+A deep module responsible for resolving configuration targets, reading, writing, removing, and querying MCP server configurations across various Agent file formats (JSONC, YAML, TOML).
+_Avoid_: Config manager, config service, persistence layer
