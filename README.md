@@ -1,105 +1,241 @@
 # mcps
 
-Cross-platform MCP (Model Context Protocol) server installer and manager for AI coding agents.
+Cross-platform MCP (Model Context Protocol) server installer, synchronizer, and configuration manager for AI coding agents.
 
-Supports **23 agents**, multiple config formats (`json`, `jsonc`, `yaml`, `toml`), and all MCP server types (`remote` HTTP/SSE, `package` via npx, and custom `command` stdio).
+`mcps` bridges configuration divergence across AI coding tools. It parses MCP server sources, auto-detects installed coding agents, converts configuration shapes into agent-specific dialects, and persists settings into native configuration files across multiple formats (`json`, `jsonc`, `yaml`, `toml`).
+
+---
+
+## Key Features
+
+- **23 Supported Agents**: Supports Cursor, VS Code, Claude Code, Claude Desktop, Antigravity, Amp, Augment, Codex, Goose, Grok, Kimi Code, Kiro, OpenCode, Pi, Qoder, Qwen Code, Trae, Zed, and more.
+- **Multi-Format Persistence**: Native read and write support for JSON, JSONC (preserving comments), YAML, and TOML.
+- **Dialect Transforms**: Declarative transformation layer mapping standard MCP server definitions into agent-specific field structures (`command` vs `cmd`, array vs string, transport types, headers, timeouts).
+- **Source Auto-Detection**: Supports npm packages (via `npx -y`), remote HTTP and SSE URLs, and custom stdio commands/Docker containers. Automatically strips scopes, extensions, and server affixes to infer clean server names.
+- **Cross-Agent Synchronization**: Inspect installed MCP servers and clone configurations across agents with automatic format and schema conversion.
+- **Dual Mode (Interactive TTY + Non-Interactive CLI)**: Interactive terminal wizards with password masking for secrets, plus full flag support for headless scripts and CI automation.
+
+---
+
+## Installation
+
+Run directly via `npx`:
+
+```bash
+npx mcps
+```
+
+Or install globally:
+
+```bash
+npm install -g mcps
+# or
+pnpm add -g mcps
+```
+
+---
+
+## Quick Start
+
+You can run `mcps` directly without installing via `npx mcps [command]`, or run `mcps [command]` if installed globally.
+
+### Interactive Wizard (Default)
+
+Launch the interactive terminal wizard:
+
+```bash
+npx mcps
+# or if installed globally:
+mcps
+```
+
+The interactive wizard provides:
+1. **Add MCP Server**: Step-by-step wizard to install npm packages, remote endpoints, or stdio commands. Supports multi-line `.env` pasting with password masking for sensitive tokens.
+2. **Manage & Sync Installed MCP Servers**: Inspect installed servers in project or global scope, view parsed details, and sync/clone any server to other detected or selected agents.
+3. **Remove MCP Server**: Select and remove MCP servers from target agent configs.
+
+### Non-Interactive CLI
+
+Install an npm MCP server into auto-detected project agents:
+
+```bash
+mcps add @modelcontextprotocol/server-filesystem
+```
+
+Install a remote SSE server to specific agents with authentication headers:
+
+```bash
+mcps add https://mcp.example.com/sse --transport sse --header "Authorization: Bearer token123" -a cursor vscode
+```
+
+List installed servers in the current project:
+
+```bash
+mcps list
+```
+
+Remove a server from all agents globally:
+
+```bash
+mcps remove server-filesystem -g --all
+```
 
 ---
 
 ## Supported Agents
 
-| Agent Name | Identifier | Scope | Transports | Config Format |
-| :--- | :--- | :--- | :--- | :--- |
-| **Amp** | `amp` | Project / Global | stdio, http, sse | `jsonc` |
-| **Antigravity** | `antigravity` | Project / Global | stdio, http, sse | `jsonc` |
-| **Antigravity CLI** | `antigravity-cli` | Project / Global | stdio, http, sse | `jsonc` |
-| **Augment** | `augment` | Project / Global | stdio, http, sse | `jsonc` |
-| **Cline (VSCode)** | `cline` | Project / Global | stdio, http, sse | `jsonc` |
-| **Cline CLI** | `cline-cli` | Project / Global | stdio, http, sse | `jsonc` |
-| **Claude Code** | `claude-code` | Project / Global | stdio, http, sse | `jsonc` |
-| **Claude Desktop** | `claude-desktop` | Global | stdio only | `jsonc` |
-| **Codex** | `codex` | Project / Global | stdio, http, sse | `toml` |
-| **Cursor** | `cursor` | Project / Global | stdio, http, sse | `jsonc` |
-| **Gemini CLI** | `gemini-cli` | Project / Global | stdio, http, sse | `jsonc` |
-| **Grok** | `grok` | Project / Global | stdio, http, sse | `toml` |
-| **Goose** | `goose` | Project / Global | stdio, http, sse | `yaml` |
-| **GitHub Copilot CLI** | `github-copilot-cli` | Project / Global | stdio, http, sse | `jsonc` |
-| **Kimi Code CLI** | `kimi-code-cli` | Project / Global | stdio, http, sse | `jsonc` |
-| **Kiro** | `kiro` | Project / Global | stdio, http, sse | `jsonc` |
-| **OpenCode** | `opencode` | Project / Global | stdio, http, sse | `jsonc` |
-| **Pi** | `pi` | Project / Global | stdio, http, sse | `jsonc` |
-| **Qoder** | `qoder` | Project / Global | stdio, http, sse | `jsonc` |
-| **Qwen Code** | `qwen-code` | Project / Global | stdio, http, sse | `jsonc` |
-| **Trae** | `trae` | Project / Global | stdio, http, sse | `jsonc` |
-| **VS Code** | `vscode` | Project / Global | stdio, http, sse | `jsonc` |
-| **Zed** | `zed` | Project / Global | stdio, http, sse | `jsonc` |
+| Agent | Identifier | Aliases | Scopes | Transports | Config Format | Config Path (Project / Global) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Amp** | `amp` | `amp-cli`, `amp-code`, `ampcode` | Project, Global | stdio, http, sse | `jsonc` | `.amp/settings.json` / `~/.config/amp/settings.jsonc` |
+| **Antigravity** | `antigravity` | - | Project, Global | stdio, http, sse | `jsonc` | `.agents/mcp_config.json` / `~/.gemini/config/mcp_config.json` |
+| **Antigravity CLI** | `antigravity-cli` | `agy` | Project, Global | stdio, http, sse | `jsonc` | `.agents/mcp_config.json` / `~/.gemini/config/mcp_config.json` |
+| **Augment** | `augment` | `auggie`, `augment-code`, `augmentcode` | Project, Global | stdio, http, sse | `jsonc` | `.augment/settings.json` / `~/.augment/settings.jsonc` |
+| **Claude Code** | `claude-code` | - | Project, Global | stdio, http, sse | `jsonc` | `.mcp.json` / `~/.claude.json` |
+| **Claude Desktop** | `claude-desktop` | - | Global | stdio | `jsonc` | User Application Support / Roaming `claude_desktop_config.json` |
+| **Cline (VS Code)** | `cline` | `cline-vscode` | Project, Global | stdio, http, sse | `jsonc` | `.cline/mcp.json` / VS Code global storage `cline_mcp_settings.json` |
+| **Cline CLI** | `cline-cli` | - | Project, Global | stdio, http, sse | `jsonc` | `.cline/mcp.json` / `~/.cline/mcp.json` |
+| **Codex** | `codex` | - | Project, Global | stdio, http, sse | `toml` | `.codex/config.toml` / `~/.codex/config.toml` |
+| **Cursor** | `cursor` | - | Project, Global | stdio, http, sse | `jsonc` | `.cursor/mcp.json` / `~/.cursor/mcp.json` |
+| **Gemini CLI** | `gemini-cli` | `gemini` | Project, Global | stdio, http, sse | `jsonc` | `.gemini/settings.json` / `~/.gemini/settings.json` |
+| **GitHub Copilot CLI** | `github-copilot-cli` | - | Project, Global | stdio, http, sse | `jsonc` | `.mcp.json` / `~/.copilot/mcp-config.json` |
+| **Goose** | `goose` | - | Project, Global | stdio, http, sse | `yaml` | `.goose/config.yaml` / `~/.config/goose/config.yaml` |
+| **Grok** | `grok` | `grok-cli`, `xai`, `xai-grok` | Project, Global | stdio, http, sse | `toml` | `.grok/config.toml` / `~/.grok/config.toml` |
+| **Kimi Code CLI** | `kimi-code-cli` | `kimi`, `kimi-cli`, `kimi-code` | Project, Global | stdio, http, sse | `jsonc` | `.kimi-code/mcp.json` / `~/.kimi-code/mcp.json` |
+| **Kiro** | `kiro` | `kiro-cli`, `kiro-ide` | Project, Global | stdio, http, sse | `jsonc` | `.kiro/settings/mcp.json` / `~/.kiro/settings/mcp.json` |
+| **OpenCode** | `opencode` | - | Project, Global | stdio, http, sse | `jsonc` | `opencode.json` / `~/.config/opencode/opencode.json` |
+| **Pi** | `pi` | `pi-agent` | Project, Global | stdio, http, sse | `jsonc` | `.pi/mcp.json` / `~/.pi/agent/mcp.json` |
+| **Qoder** | `qoder` | `qoder-cli` | Project, Global | stdio, http, sse | `jsonc` | `.mcp.json` / `~/.qoder/settings.json` |
+| **Qwen Code** | `qwen-code` | `qwen`, `qwen-cli`, `qwencode` | Project, Global | stdio, http, sse | `jsonc` | `.qwen/settings.json` / `~/.qwen/settings.json` |
+| **Trae** | `trae` | `trae-code`, `traecode`, `trae-ide` | Project, Global | stdio, http, sse | `jsonc` | `.trae/mcp.json` / `~/.trae/mcp.json` |
+| **VS Code** | `vscode` | `github-copilot` | Project, Global | stdio, http, sse | `jsonc` | `.vscode/mcp.json` / User `mcp.json` |
+| **Zed** | `zed` | - | Project, Global | stdio, http, sse | `jsonc` | `.zed/settings.json` / `~/.config/zed/settings.json` |
 
 ---
 
-## CLI Usage
+## CLI Reference
 
-### Interactive Wizard (Recommended)
+### Global Options
 
-Run `mcps` without arguments to launch the interactive terminal wizard:
+- `-v, --version`: Display version number.
+- `-h, --help`: Display command-line help.
+
+### `mcps add [source]`
+
+Adds an MCP server to one or more agent configurations.
 
 ```bash
-mcps
+mcps add [source] [options]
 ```
 
-The interactive wizard guides you through:
-- **Interactive Source Selection**: npm packages, remote URLs, or local commands/Docker
-- **Environment Perception**: Automatically detects installed agents in your project or global environment and pre-selects them
-- **Flexible Config & Env Entry**: Support for one-by-one key-value entry (with automatic password mask for secrets) or pasting multi-line `.env` files
-- **Cross-Agent Synchronization**: Inspect installed MCPs and clone/sync configurations across multiple coding agents with automatic format translation
-- **Interactive Removal**: Pick and remove MCP servers from specific or all agents
+#### Arguments
+- `[source]`: Remote URL (`http://...`, `https://...`), npm package (`@modelcontextprotocol/server-git`), or shell command (`python -m my_server`). If omitted in TTY mode, opens the interactive wizard.
 
----
+#### Options
+- `-a, --agent <agents...>`: Target agents by identifier or alias. Pass `'*'` to target all agents.
+- `--all`: Install to all supported agents for the specified scope.
+- `-g, --global`: Install to user-level configuration files instead of the current project.
+- `-t, --transport <type>`: Transport type for remote servers (`http` or `sse`).
+- `--header <header...>`: HTTP headers formatted as `Key: Value`. Repeatable.
+- `--env <env...>`: Environment variables formatted as `KEY=VALUE`. Repeatable.
+- `--args <args...>`: Additional command-line arguments for stdio/package servers.
+- `-n, --name <name>`: Explicit override for server name.
+- `-y, --yes`: Non-interactive mode, bypass all confirmation prompts.
 
-### 1. Add / Install an MCP Server
+#### Examples
 
 ```bash
-# Install npm package MCP to detected agents in current project
-mcps add @modelcontextprotocol/server-filesystem
+# Auto-detect project agents and install npm package
+mcps add @modelcontextprotocol/server-postgres
 
-# Install to specific agent (e.g. Cursor, VS Code)
-mcps add @modelcontextprotocol/server-postgres -a cursor vscode
+# Install with explicit environment variables and custom arguments
+mcps add @modelcontextprotocol/server-github \
+  --env "GITHUB_PERSONAL_ACCESS_TOKEN=ghp_xxx" \
+  -a cursor claude-code
 
-# Install to all supported agents globally
-mcps add mcp-server-git --all -g
+# Install custom python command with name override
+mcps add "python -m my_mcp_server" -n custom-server -a vscode
 
-# Install remote MCP server (HTTP or SSE)
-mcps add https://mcp.example.com/api --transport sse --header "Authorization: Bearer token"
-
-# Install custom command with env vars
-mcps add "python -m my_mcp_server" --env "API_KEY=xyz" -n my-mcp
+# Install remote server with SSE transport and authorization header globally
+mcps add https://mcp.company.internal/sse \
+  -t sse \
+  --header "Authorization: Bearer sse_secret" \
+  -g -a cursor
 ```
 
-### 2. List Installed MCP Servers
+### `mcps list` (alias: `mcps ls`)
+
+Lists installed MCP servers across agents.
 
 ```bash
-# List in current project
+mcps list [options]
+mcps ls [options]
+```
+
+#### Options
+- `-g, --global`: List global configurations instead of current project.
+- `-a, --agent <agents...>`: Filter listing by specific agent identifiers or aliases.
+- `--json`: Output server configurations as structured JSON.
+
+#### Examples
+
+```bash
+# List all servers configured in the current project
 mcps list
 
-# List globally installed servers
-mcps list -g
+# List all global servers as JSON
+mcps list -g --json
 
-# Output as JSON
-mcps list --json
+# List servers configured in Cursor and VS Code
+mcps list -a cursor vscode
 ```
 
-### 3. Remove an MCP Server
+### `mcps remove [name]` (alias: `mcps rm`)
+
+Removes an MCP server from agent configuration files.
 
 ```bash
-# Remove from project configs
-mcps remove server-filesystem
+mcps remove [name] [options]
+mcps rm [name] [options]
+```
 
-# Remove from specific agent globally
-mcps remove server-filesystem -a cursor -g
+#### Arguments
+- `[name]`: Name of the MCP server to remove. If omitted in TTY mode, opens the interactive removal wizard.
+
+#### Options
+- `-g, --global`: Remove from global user-level configurations.
+- `-a, --agent <agents...>`: Filter removal to specific agents. Pass `'*'` for all agents.
+- `-y, --yes`: Skip confirmation prompt.
+
+#### Examples
+
+```bash
+# Remove from all configured project agents
+mcps remove postgres
+
+# Remove from Cursor in global scope without prompt
+mcps remove github -a cursor -g -y
 ```
 
 ---
 
-## Node API Usage
+## Source Parsing Mechanics
+
+When a source string is provided to `mcps add`, `mcps` classifies and normalizes it automatically:
+
+1. **Remote URL**: Any source starting with `http://` or `https://`.
+   - Transport defaults to `sse` if the URL contains `/sse`, otherwise `http`.
+   - Server name is derived from the primary hostname label, stripping common TLDs and generic prefixes (`api`, `mcp`, `app`).
+2. **npm Package**: Single token matching npm package naming rules.
+   - Command is normalized to `npx -y <package>`.
+   - Server name is inferred by stripping npm scope prefixes (`@modelcontextprotocol/`), package affixes (`mcp-server-`, `-mcp-server`, `mcp-`, `-mcp`, `-server`, `server-`), and script extensions.
+3. **Command**: Any string containing spaces or command runners (`python`, `uvx`, `node`, `docker`).
+   - Command runner and flags are parsed, extracting the target package or command name as the inferred server name.
+
+---
+
+## Programmatic Node API
+
+`mcps` provides a strongly-typed TypeScript/ESM and CommonJS API.
 
 ```typescript
 import {
@@ -107,22 +243,39 @@ import {
   listInstalledMcpServers,
   removeMcpServer,
   parseMcpSource,
+  resolveTargetAgents,
+  transformServerConfigForAgent,
+  getMcpAgentConfig,
 } from "mcps";
 
-// Install an MCP server
-const result = installMcpServer({
-  source: "@modelcontextprotocol/server-github",
-  agents: ["cursor", "vscode"],
-  env: { GITHUB_PERSONAL_ACCESS_TOKEN: "ghp_xxx" },
+// 1. Install an MCP server
+const installResult = installMcpServer({
+  source: "@modelcontextprotocol/server-postgres",
+  agents: ["cursor", "vscode", "codex"],
+  env: {
+    POSTGRES_CONNECTION_STRING: "postgresql://localhost/db",
+  },
   global: false,
 });
 
-// List MCP servers
-const servers = listInstalledMcpServers({ global: false });
+console.log(`Configured ${installResult.serverName}:`);
+for (const res of installResult.results) {
+  console.log(`- ${res.agent}: ${res.success ? "OK" : res.error} (${res.path})`);
+}
 
-// Remove an MCP server
-removeMcpServer({
-  name: "github",
+// 2. List installed servers
+const installedServers = listInstalledMcpServers({
+  global: false,
+  agents: ["cursor"],
+});
+
+// 3. Parse an MCP source string
+const parsed = parseMcpSource("https://api.github.com/mcp/sse");
+// { type: "remote", value: "https://api.github.com/mcp/sse", inferredName: "github" }
+
+// 4. Remove an MCP server
+const removeResults = removeMcpServer({
+  name: "postgres",
   agents: ["cursor"],
   global: false,
 });
@@ -130,18 +283,36 @@ removeMcpServer({
 
 ---
 
-## Development
+## Architecture & Seams
+
+`mcps` is structured as a collection of decoupled deep modules:
+
+- **CLI Commands (`src/cli/`)**: Built on `commander`. Guarantees clean separation between non-interactive execution and interactive TTY fallback.
+- **Interactive Wizards (`src/interactive/`)**: Terminal interface built with `@inquirer/prompts`. Handles scoped inspection, password masking for credentials, and cross-agent synchronization.
+- **Target Agent Resolver (`src/resolve-target-agents.ts`)**: Resolves target agents by combining CLI arguments, wildcards, filesystem auto-detection, and transport capability filtering (e.g. preventing remote servers on stdio-only agents).
+- **Agent Config Store (`src/config-store.ts`)**: Unified persistence engine managing path resolution, atomic updates, and format-specific serialization.
+- **Format Adapters (`src/formats/`)**: Isolated adapters for `json`, `jsonc` (comment-preserving via `jsonc-parser`), `yaml` (`yaml`), and `toml` (`@iarna/toml`).
+- **Server Config Dialects (`src/transforms/`)**: Declarative transformations standardizing variations in agent configuration schemas (e.g., Goose's `cmd`/`envs`, VS Code's `servers` and `type`, OpenCode's command arrays).
+
+---
+
+## Development & Verification
+
+Every change must pass all three gates:
 
 ```bash
-# Install dependencies
-pnpm install
+# 1. Type check
+pnpm run typecheck
 
-# Run tests
+# 2. Unit and integration tests
 pnpm test
 
-# Build
+# 3. Build ESM and CJS bundles
 pnpm build
-
-# Typecheck
-pnpm typecheck
 ```
+
+---
+
+## License
+
+MIT
