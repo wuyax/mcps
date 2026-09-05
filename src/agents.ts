@@ -407,7 +407,7 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
       existsSync(join(cwd, ".pi", "mcp.json")) || existsSync(join(cwd, ".pi")),
     transformDialect: "pi",
   },
-  // https://docs.qoder.com/zh/cli/mcp-servers
+  // https://docs.qoder.com/zh/cli/mcp-servers.md
   qoder: {
     name: "qoder",
     displayName: "Qoder",
@@ -495,7 +495,7 @@ export const mcpAgents: Record<McpAgentType, McpAgentConfig> = {
     detectProjectInstall: (cwd) => existsSync(join(cwd, ".vscode", "mcp.json")),
     transformDialect: "vscode",
   },
-  // https://zed.dev/docs/ai/mcp
+  // https://zed.dev/docs/ai/mcp.md
   zed: {
     name: "zed",
     displayName: "Zed",

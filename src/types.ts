@@ -80,7 +80,6 @@ export interface ServerConfigDialectOptions {
   urlField?: string;
   defaultEnvEmpty?: boolean;
   defaultHeadersEmpty?: boolean;
-  wrapper?: Record<string, unknown>;
   extraFields?: Record<string, unknown>;
   includeServerName?: boolean;
   timeoutSeconds?: number;

@@ -41,17 +41,15 @@ describe("Server Config Transform deep module", () => {
   });
 
   describe("custom dialect options", () => {
-    it("supports custom field aliases, wrapper, and extraFields", () => {
+    it("supports custom field aliases and extraFields", () => {
       const transformed = transformServerConfig("my-server", remoteHttp, {
         remoteTransport: "type-http-sse",
         urlField: "endpoint",
-        wrapper: { namespace: "custom" },
         extraFields: { active: true },
         timeoutSeconds: 60,
       });
 
       expect(transformed).toEqual({
-        namespace: "custom",
         active: true,
         type: "http",
         endpoint: remoteHttp.url,
@@ -168,10 +166,13 @@ describe("Server Config Transform deep module", () => {
 
       // Zed
       expect(transformServerConfig("srv", stdioWithEnv, "zed")).toEqual({
-        source: "custom",
         command: stdioWithEnv.command,
         args: stdioWithEnv.args,
         env: stdioWithEnv.env,
+      });
+      expect(transformServerConfig("srv", remoteHttp, "zed")).toEqual({
+        url: remoteHttp.url,
+        headers: remoteHttp.headers,
       });
 
       // VSCode

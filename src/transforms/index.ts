@@ -75,10 +75,8 @@ const DIALECT_PRESETS: Record<ServerConfigDialectName, ServerConfigDialectOption
   },
   zed: {
     stdioTransport: "none",
-    remoteTransport: "type-http-sse",
-    wrapper: { source: "custom" },
+    remoteTransport: "none",
     defaultEnvEmpty: true,
-    defaultHeadersEmpty: true,
   },
 };
 
@@ -99,10 +97,6 @@ const transformRemoteConfig = (
   options: ServerConfigDialectOptions,
 ): Record<string, unknown> => {
   const result: Record<string, unknown> = {};
-
-  if (options.wrapper) {
-    Object.assign(result, options.wrapper);
-  }
 
   if (options.includeServerName) {
     result.name = serverName;
@@ -180,10 +174,6 @@ const transformStdioConfig = (
   options: ServerConfigDialectOptions,
 ): Record<string, unknown> => {
   const result: Record<string, unknown> = {};
-
-  if (options.wrapper) {
-    Object.assign(result, options.wrapper);
-  }
 
   if (options.includeServerName) {
     result.name = serverName;
