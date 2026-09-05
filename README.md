@@ -1,4 +1,4 @@
-# mcps
+# mcps (@wuyax/mcps)
 
 Cross-platform MCP (Model Context Protocol) server installer, synchronizer, and configuration manager for AI coding agents.
 
@@ -22,29 +22,29 @@ Cross-platform MCP (Model Context Protocol) server installer, synchronizer, and 
 Run directly via `npx`:
 
 ```bash
-npx mcps
+npx @wuyax/mcps
 ```
 
 Or install globally:
 
 ```bash
-npm install -g mcps
+npm install -g @wuyax/mcps
 # or
-pnpm add -g mcps
+pnpm add -g @wuyax/mcps
 ```
 
 ---
 
 ## Quick Start
 
-You can run `mcps` directly without installing via `npx mcps [command]`, or run `mcps [command]` if installed globally.
+You can run directly via `npx @wuyax/mcps [command]`, or run `mcps [command]` if installed globally.
 
 ### Interactive Wizard (Default)
 
 Launch the interactive terminal wizard:
 
 ```bash
-npx mcps
+npx @wuyax/mcps
 # or if installed globally:
 mcps
 ```

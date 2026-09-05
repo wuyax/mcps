@@ -1,5 +1,5 @@
 {
-  "name": "mcps",
+  "name": "@wuyax/mcps",
   "version": "0.1.0-beta.1",
   "description": "Cross-platform MCP (Model Context Protocol) server installer and manager for AI coding agents",
   "type": "module",
@@ -45,5 +45,8 @@
     "onlyBuiltDependencies": [
       "esbuild"
     ]
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

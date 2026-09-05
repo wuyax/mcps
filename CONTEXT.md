@@ -1,4 +1,4 @@
-# mcps Context
+# mcps (@wuyax/mcps) Context
 
 Orchestrates the configuration, installation, removal, and listing of Model Context Protocol (MCP) servers across various coding AI agents.
 

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Repository guidelines, architecture seams, and coding standards for `mcps`.
+Repository guidelines, architecture seams, and coding standards for `@wuyax/mcps` (`mcps`).
 
 ## Architecture & Seams
 
