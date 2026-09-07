@@ -155,3 +155,17 @@ export interface RemoveMcpServerResult {
   removed: boolean;
   error?: string;
 }
+
+export interface UpdateMcpServerOptions extends McpScopeOptions {
+  serverName: string;
+  config: McpServerConfig;
+  previousConfig?: McpServerConfig;
+  agents?: McpAgentType[];
+}
+
+export interface UpdateMcpServerResult {
+  serverName: string;
+  config: McpServerConfig;
+  results: McpInstallResultForAgent[];
+  incompatible: { agent: McpAgentType; reason: string }[];
+}

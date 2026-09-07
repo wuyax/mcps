@@ -1,8 +1,6 @@
 import { Command } from "commander";
 import pc from "picocolors";
 
-import { getMcpAgentConfig, isMcpTransportSupported } from "../agents.ts";
-import { installMcpServerForAgent } from "../installer.ts";
 import { groupInstalledServersByName } from "../interactive/utils/group-installed-servers.ts";
 import { displayServerDetails, wizardManage } from "../interactive/wizard-manage.ts";
 import { listInstalledMcpServers } from "../list.ts";
@@ -10,8 +8,8 @@ import type {
   McpAgentType,
   McpRemoteTransport,
   McpServerConfig,
-  McpTransportType,
 } from "../types.ts";
+import { updateMcpServer } from "../update-mcp-server.ts";
 import { logger } from "../utils/logger.ts";
 import { parseKeyValueList } from "../utils/parse-key-value-list.ts";
 import { parseMcpAgentList } from "../utils/parse-mcp-agent-list.ts";
@@ -22,7 +20,9 @@ export interface McpManageCliOptions {
   global?: boolean;
   transport?: string;
   header?: string[];
+  clearHeaders?: boolean;
   env?: string[];
+  clearEnv?: boolean;
   args?: string[];
   command?: string;
   url?: string;
@@ -42,7 +42,9 @@ export const mcpManageCommand = new Command("manage")
   .option("-g, --global", "Manage global scope servers instead of project")
   .option("-t, --transport <type>", "Transport type for remote servers (http or sse)")
   .option("--header <header...>", "HTTP header (Header: Value), repeatable")
+  .option("--clear-headers", "Clear all HTTP headers for remote servers")
   .option("--env <env...>", "Env var for stdio servers (KEY=VALUE), repeatable")
+  .option("--clear-env", "Clear all environment variables for stdio servers")
   .option("--args <args...>", "CLI arguments for stdio/package servers")
   .option("--command <command>", "Executable command for stdio servers")
   .option("--url <url>", "Remote endpoint URL")
@@ -56,7 +58,9 @@ export const mcpManageCommand = new Command("manage")
         options.command !== undefined ||
         options.args !== undefined ||
         options.env !== undefined ||
+        Boolean(options.clearEnv) ||
         options.header !== undefined ||
+        Boolean(options.clearHeaders) ||
         options.url !== undefined ||
         options.transport !== undefined;
 
@@ -100,38 +104,46 @@ export const mcpManageCommand = new Command("manage")
         if (options.transport !== undefined) {
           updatedConfig.type = resolveTransport(options.transport);
         }
+        if (options.clearEnv) {
+          updatedConfig.env = undefined;
+        }
         if (options.env !== undefined) {
           const parsedEnv = parseKeyValueList(options.env, "=");
           updatedConfig.env = { ...(updatedConfig.env ?? {}), ...parsedEnv };
+        }
+        if (options.clearHeaders) {
+          updatedConfig.headers = undefined;
         }
         if (options.header !== undefined) {
           const parsedHeaders = parseKeyValueList(options.header, ":");
           updatedConfig.headers = { ...(updatedConfig.headers ?? {}), ...parsedHeaders };
         }
 
-        const targetAgents: McpAgentType[] = options.agent
+        const targetAgents: McpAgentType[] | undefined = options.agent
           ? (parseMcpAgentList(options.agent) ?? targetGroup.agents)
           : targetGroup.agents;
 
-        const requestedTransport: McpTransportType = updatedConfig.url
-          ? updatedConfig.type ?? "http"
-          : "stdio";
+        const updateResult = updateMcpServer({
+          serverName,
+          config: updatedConfig,
+          previousConfig: targetGroup.config,
+          agents: targetAgents,
+          global: isGlobal,
+          cwd,
+        });
 
-        const compatibleAgents: McpAgentType[] = [];
-        for (const agent of targetAgents) {
-          const agentConfig = getMcpAgentConfig(agent);
-          if (isMcpTransportSupported(agentConfig, requestedTransport)) {
-            compatibleAgents.push(agent);
-          } else {
-            const reason =
-              agentConfig.unsupportedTransportMessage ??
-              `Agent does not support ${requestedTransport} transport`;
-            logger.warn(`Skipping ${pc.cyan(agent)}: ${reason}`);
-          }
+        for (const item of updateResult.incompatible) {
+          logger.warn(`Skipping ${pc.cyan(item.agent)}: ${item.reason}`);
         }
 
+        const attemptedResults = updateResult.results.filter(
+          (r) => !updateResult.incompatible.some((i) => i.agent === r.agent),
+        );
 
-        if (compatibleAgents.length === 0) {
+        if (attemptedResults.length === 0) {
+          const requestedTransport = updateResult.config.url
+            ? updateResult.config.type ?? "http"
+            : "stdio";
           logger.error(
             `None of the target agents support ${requestedTransport} transport. Update aborted.`,
           );
@@ -140,20 +152,16 @@ export const mcpManageCommand = new Command("manage")
         }
 
         logger.info(
-          `Updating ${pc.bold(serverName)} across ${pc.cyan(String(compatibleAgents.length))} agent(s)...`,
+          `Updating ${pc.bold(serverName)} across ${pc.cyan(String(attemptedResults.length))} agent(s)...`,
         );
 
         let allSuccess = true;
-        for (const agent of compatibleAgents) {
-          const res = installMcpServerForAgent(serverName, updatedConfig, agent, {
-            global: isGlobal,
-            cwd,
-          });
+        for (const res of attemptedResults) {
           if (res.success) {
-            logger.success(`${pc.cyan(agent)}: Successfully updated in ${pc.dim(res.path)}`);
+            logger.success(`${pc.cyan(res.agent)}: Successfully updated in ${pc.dim(res.path)}`);
           } else {
             allSuccess = false;
-            logger.error(`${pc.cyan(agent)}: Update failed - ${res.error}`);
+            logger.error(`${pc.cyan(res.agent)}: Update failed - ${res.error}`);
           }
         }
 

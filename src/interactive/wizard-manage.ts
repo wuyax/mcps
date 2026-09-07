@@ -5,10 +5,9 @@ import {
   getMcpAgentConfig,
   getMcpAgentsSupportingProjectScope,
   getMcpAgentTypes,
-  isMcpTransportSupported,
 } from "../agents.ts";
-import { installMcpServerForAgent } from "../installer.ts";
 import { listInstalledMcpServers } from "../list.ts";
+import { resolveTargetAgents } from "../resolve-target-agents.ts";
 import type {
   McpAgentType,
   McpRemoteTransport,
@@ -16,6 +15,7 @@ import type {
   McpServerConfig,
   McpTransportType,
 } from "../types.ts";
+import { updateMcpServer } from "../update-mcp-server.ts";
 import { logger } from "../utils/logger.ts";
 
 import { promptEditArgs } from "./prompts/args.ts";
@@ -119,6 +119,7 @@ const handleEditServerConfig = async ({
           { name: "Edit HTTP Headers (headers)", value: "headers" },
           { name: "Edit Remote URL (url)", value: "url" },
           { name: "Edit Transport Protocol (type)", value: "transport" },
+          { name: "Switch to local command (stdio)", value: "switch_type" },
           { name: "Reset changes to original", value: "reset" },
           { name: "Save and apply changes", value: "save" },
           { name: "Cancel (discard changes)", value: "cancel" },
@@ -127,6 +128,7 @@ const handleEditServerConfig = async ({
           { name: "Edit Environment Variables (env)", value: "env" },
           { name: "Edit Command Arguments (args)", value: "args" },
           { name: "Edit Executable Command (command)", value: "command" },
+          { name: "Switch to remote server (HTTP/SSE)", value: "switch_type" },
           { name: "Reset changes to original", value: "reset" },
           { name: "Save and apply changes", value: "save" },
           { name: "Cancel (discard changes)", value: "cancel" },
@@ -150,6 +152,51 @@ const handleEditServerConfig = async ({
         headers: targetGroup.config.headers ? { ...targetGroup.config.headers } : undefined,
       };
       logger.info("Configuration reset to original");
+      continue;
+    }
+
+    if (editAction === "switch_type") {
+      if (isRemote) {
+        const newCmd = await input({
+          message: "Executable command (e.g. node, npx):",
+          validate: (val) => (val.trim() ? true : "Command cannot be empty"),
+        });
+        const newArgs = await promptEditArgs([]);
+        const newEnv = await promptEditEnvConfig({});
+        workingConfig = {
+          command: newCmd.trim(),
+          args: newArgs.length > 0 ? newArgs : undefined,
+          env: Object.keys(newEnv).length > 0 ? newEnv : undefined,
+        };
+        logger.success(`Switched [${serverName}] configuration to stdio mode`);
+      } else {
+        const newUrl = await input({
+          message: "Remote server URL:",
+          validate: (val) => {
+            const trimmed = val.trim();
+            if (!trimmed) return "URL cannot be empty";
+            if (!/^https?:\/\//i.test(trimmed)) {
+              return "Please enter a valid URL starting with http:// or https://";
+            }
+            return true;
+          },
+        });
+        const transport = await select<McpRemoteTransport>({
+          message: "Select remote transport protocol:",
+          choices: [
+            { name: "HTTP", value: "http" },
+            { name: "SSE (Server-Sent Events)", value: "sse" },
+          ],
+          default: "http",
+        });
+        const newHeaders = await promptEditHeadersConfig({});
+        workingConfig = {
+          url: newUrl.trim(),
+          type: transport,
+          headers: Object.keys(newHeaders).length > 0 ? newHeaders : undefined,
+        };
+        logger.success(`Switched [${serverName}] configuration to remote mode`);
+      }
       continue;
     }
 
@@ -205,41 +252,33 @@ const handleEditServerConfig = async ({
         });
       }
 
-      // Check transport compatibility for target agents
       const requestedTransport: McpTransportType = workingConfig.url
         ? workingConfig.type ?? "http"
         : "stdio";
 
-      const compatibleAgents: McpAgentType[] = [];
-      const incompatibleAgents: { agent: McpAgentType; reason: string }[] = [];
+      const resolution = resolveTargetAgents({
+        requested: targetAgents,
+        global: isGlobal,
+        cwd,
+        transport: requestedTransport,
+      });
 
-      for (const agent of targetAgents) {
-        const agentConfig = getMcpAgentConfig(agent);
-        if (isMcpTransportSupported(agentConfig, requestedTransport)) {
-          compatibleAgents.push(agent);
-        } else {
-          const reason =
-            agentConfig.unsupportedTransportMessage ??
-            `Agent does not support ${requestedTransport} transport`;
-          incompatibleAgents.push({ agent, reason });
-        }
-      }
-
-
-      if (incompatibleAgents.length > 0) {
-        for (const item of incompatibleAgents) {
+      if (resolution.incompatible.length > 0) {
+        for (const item of resolution.incompatible) {
           logger.warn(`Skipping ${pc.cyan(item.agent)}: ${item.reason}`);
         }
       }
 
-      if (compatibleAgents.length === 0) {
+      if (resolution.compatibleAgents.length === 0) {
         logger.error(
           `None of the selected agents support ${requestedTransport} transport. Cannot update.`,
         );
         continue;
       }
 
-      const agentNames = compatibleAgents.map((a) => getMcpAgentConfig(a).displayName).join(", ");
+      const agentNames = resolution.compatibleAgents
+        .map((a) => getMcpAgentConfig(a).displayName)
+        .join(", ");
       const confirmed = await confirm({
         message: `Confirm updating configuration for [${serverName}] across: ${agentNames}?`,
         default: true,
@@ -250,23 +289,35 @@ const handleEditServerConfig = async ({
         continue;
       }
 
-      for (const targetAgent of compatibleAgents) {
-        const res = installMcpServerForAgent(serverName, workingConfig, targetAgent, {
-          global: isGlobal,
-          cwd,
-        });
+      const updateResult = updateMcpServer({
+        serverName,
+        config: workingConfig,
+        previousConfig: targetGroup.config,
+        agents: resolution.compatibleAgents,
+        global: isGlobal,
+        cwd,
+      });
+
+      let updatedAny = false;
+      const succeededAgents: McpAgentType[] = [];
+      for (const res of updateResult.results) {
         if (res.success) {
+          updatedAny = true;
+          succeededAgents.push(res.agent);
           logger.success(
-            `${pc.cyan(targetAgent)}: Successfully updated configuration in ${pc.dim(res.path)}`,
+            `${pc.cyan(res.agent)}: Successfully updated configuration in ${pc.dim(res.path)}`,
           );
         } else {
-          logger.error(`${pc.cyan(targetAgent)}: Update failed - ${res.error}`);
+          logger.error(`${pc.cyan(res.agent)}: Update failed - ${res.error}`);
         }
       }
 
-      targetGroup.config = workingConfig;
-      logger.success(`Configuration for [${serverName}] updated successfully!`);
-      return;
+      if (updatedAny) {
+        targetGroup.config = updateResult.config;
+        targetGroup.agents = targetGroup.agents.filter((a) => succeededAgents.includes(a));
+        logger.success(`Configuration for [${serverName}] updated successfully!`);
+        return;
+      }
     }
   }
 };
@@ -396,16 +447,27 @@ export const wizardManage = async (options: WizardManageOptions = {}): Promise<v
         continue;
       }
 
-      for (const targetAgent of selectedToSync) {
-        const res = installMcpServerForAgent(chosenServerName, targetGroup.config, targetAgent, {
-          global: isGlobal,
-          cwd,
-        });
+      const syncResult = updateMcpServer({
+        serverName: chosenServerName,
+        config: targetGroup.config,
+        agents: selectedToSync,
+        global: isGlobal,
+        cwd,
+      });
+
+      for (const item of syncResult.incompatible) {
+        logger.warn(`Skipping ${pc.cyan(item.agent)}: ${item.reason}`);
+      }
+
+      for (const res of syncResult.results) {
+        if (syncResult.incompatible.some((i) => i.agent === res.agent)) {
+          continue;
+        }
         if (res.success) {
-          logger.success(`${pc.cyan(targetAgent)}: Successfully synced to ${pc.dim(res.path)}`);
-          targetGroup.agents.push(targetAgent);
+          logger.success(`${pc.cyan(res.agent)}: Successfully synced to ${pc.dim(res.path)}`);
+          targetGroup.agents.push(res.agent);
         } else {
-          logger.error(`${pc.cyan(targetAgent)}: Sync failed - ${res.error}`);
+          logger.error(`${pc.cyan(res.agent)}: Sync failed - ${res.error}`);
         }
       }
     }

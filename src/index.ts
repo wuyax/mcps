@@ -60,6 +60,11 @@ export {
   parseMcpSource as parseSource,
 } from "./source-parser.ts";
 export { removeMcpServer, removeMcpServer as remove, removeMcpServerFromAgent } from "./remove.ts";
+export {
+  sanitizeUpdatedServerConfig,
+  updateMcpServer,
+  updateMcpServer as update,
+} from "./update-mcp-server.ts";
 export { mainMenu } from "./interactive/main-menu.ts";
 export { wizardAdd } from "./interactive/wizard-add.ts";
 export {
@@ -128,4 +133,6 @@ export type {
   ServerConfigDialect,
   ServerConfigDialectName,
   ServerConfigDialectOptions,
+  UpdateMcpServerOptions,
+  UpdateMcpServerResult,
 } from "./types.ts";

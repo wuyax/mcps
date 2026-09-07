@@ -2,6 +2,7 @@ import { confirm, input, password, select } from "@inquirer/prompts";
 import pc from "picocolors";
 
 import { logger } from "../../utils/logger.ts";
+import { promptEditKeyValueConfig } from "./kv.ts";
 import { promptEditorText, readMultilineTextFromTerminal } from "./multiline.ts";
 
 export const SECRET_KEY_PATTERN = /(token|key|secret|password|passwd|auth|credential)/i;
@@ -176,8 +177,6 @@ export const promptEnvConfig = async (
 
   return env;
 };
-
-import { promptEditKeyValueConfig } from "./kv.ts";
 
 /**
  * Dedicated prompt loop for inspecting, modifying, adding, and removing

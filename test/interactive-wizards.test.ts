@@ -23,6 +23,7 @@ import {
   wizardAdd,
   wizardManage,
   wizardRemove,
+  type McpStdioServerConfig,
 } from "../src/index.ts";
 import { MemoryConfigStoreAdapter } from "../src/config-store.ts";
 import { getMcpAgentConfig, isMcpTransportSupported } from "../src/agents.ts";
@@ -127,8 +128,8 @@ describe("Interactive modules export and API", () => {
     customStore.writeServer("cursor", "my-server", initialConfig, { cwd: "/test" });
 
     // Verify initial
-    const srv1 = customStore.readServer("cursor", "my-server", { cwd: "/test" }) as any;
-    expect(srv1.env.PORT).toBe("3000");
+    const srv1 = customStore.readServer("cursor", "my-server", { cwd: "/test" }) as McpStdioServerConfig;
+    expect(srv1.env?.PORT).toBe("3000");
 
     // Updated server config with modified env and args
     const updatedConfig = {
@@ -139,10 +140,10 @@ describe("Interactive modules export and API", () => {
     customStore.writeServer("cursor", "my-server", updatedConfig, { cwd: "/test" });
 
     // Verify updated
-    const srv2 = customStore.readServer("cursor", "my-server", { cwd: "/test" }) as any;
+    const srv2 = customStore.readServer("cursor", "my-server", { cwd: "/test" }) as McpStdioServerConfig;
     expect(srv2.args).toEqual(["server.js", "--verbose"]);
-    expect(srv2.env.PORT).toBe("8080");
-    expect(srv2.env.API_KEY).toBe("secret");
+    expect(srv2.env?.PORT).toBe("8080");
+    expect(srv2.env?.API_KEY).toBe("secret");
   });
 
   it("should validate transport capability for target agents correctly", () => {
