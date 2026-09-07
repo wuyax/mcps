@@ -169,7 +169,8 @@ describe("Interactive modules export and API", () => {
           env: { API_KEY: "secret123" },
         },
         agents: ["cursor", "vscode"],
-        isGlobal: true,
+        global: true,
+        hasDivergence: true,
       }),
     ).not.toThrow();
 
@@ -185,6 +186,42 @@ describe("Interactive modules export and API", () => {
         isGlobal: false,
       }),
     ).not.toThrow();
+  });
+
+  it("detects configuration divergence across agents in groupInstalledServersByName", () => {
+    const identicalInstalled = [
+      {
+        serverName: "srv1",
+        agent: "cursor" as const,
+        path: "/path1",
+        config: { command: "node", args: ["srv.js"] },
+      },
+      {
+        serverName: "srv1",
+        agent: "vscode" as const,
+        path: "/path2",
+        config: { command: "node", args: ["srv.js"] },
+      },
+    ];
+    const groupedIdentical = groupInstalledServersByName(identicalInstalled);
+    expect(groupedIdentical.get("srv1")?.hasDivergence).toBe(false);
+
+    const divergentInstalled = [
+      {
+        serverName: "srv1",
+        agent: "cursor" as const,
+        path: "/path1",
+        config: { command: "node", args: ["srv.js"] },
+      },
+      {
+        serverName: "srv1",
+        agent: "vscode" as const,
+        path: "/path2",
+        config: { command: "node", args: ["srv.js", "--flag"] },
+      },
+    ];
+    const groupedDivergent = groupInstalledServersByName(divergentInstalled);
+    expect(groupedDivergent.get("srv1")?.hasDivergence).toBe(true);
   });
 });
 

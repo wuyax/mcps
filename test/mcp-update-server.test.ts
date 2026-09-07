@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { installMcpServer } from "../src/install-mcp-server.ts";
 import { listInstalledMcpServers } from "../src/list.ts";
@@ -11,6 +11,7 @@ import {
   sanitizeUpdatedServerConfig,
   updateMcpServer,
 } from "../src/update-mcp-server.ts";
+import { logger } from "../src/utils/logger.ts";
 
 describe("sanitizeUpdatedServerConfig", () => {
   it("strips stdio fields when switching to remote server", () => {
@@ -409,6 +410,68 @@ describe("CLI manage clear flags", () => {
       expect(process.exitCode).toBe(1);
     } finally {
       process.exitCode = origExitCode;
+      process.chdir(origCwd);
+    }
+  });
+
+  it("warns when passing stdio flags to an existing remote server without --command", async () => {
+    installMcpServer({
+      source: "https://example.com/sse",
+      name: "warn-remote-srv",
+      agents: ["cursor"],
+      cwd,
+    });
+
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    const origCwd = process.cwd();
+    try {
+      process.chdir(cwd);
+      await mcpManageCommand.parseAsync([
+        "node",
+        "test",
+        "warn-remote-srv",
+        "--env",
+        "FOO=BAR",
+        "-a",
+        "cursor",
+      ]);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Server "warn-remote-srv" is a remote server. The following stdio flags will be ignored: --env'),
+      );
+    } finally {
+      warnSpy.mockRestore();
+      process.chdir(origCwd);
+    }
+  });
+
+  it("warns when passing remote flags to an existing stdio server without --url", async () => {
+    installMcpServer({
+      source: "node srv.js",
+      name: "warn-stdio-srv",
+      agents: ["cursor"],
+      cwd,
+    });
+
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    const origCwd = process.cwd();
+    try {
+      process.chdir(cwd);
+      await mcpManageCommand.parseAsync([
+        "node",
+        "test",
+        "warn-stdio-srv",
+        "--header",
+        "Authorization: Bearer token",
+        "-a",
+        "cursor",
+      ]);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Server "warn-stdio-srv" is a stdio server. The following remote flags will be ignored: --header'),
+      );
+    } finally {
+      warnSpy.mockRestore();
       process.chdir(origCwd);
     }
   });

@@ -16,77 +16,26 @@ import type {
   McpTransportType,
 } from "../types.ts";
 import { updateMcpServer } from "../update-mcp-server.ts";
+import {
+  displayServerDetails,
+  type DisplayServerDetailsOptions,
+} from "../utils/display-server-details.ts";
 import { logger } from "../utils/logger.ts";
 
 import { promptEditArgs } from "./prompts/args.ts";
-import { maskSecretValue, promptEditEnvConfig } from "./prompts/env.ts";
-import { maskSecretHeader, promptEditHeadersConfig } from "./prompts/headers.ts";
+import { promptEditEnvConfig } from "./prompts/env.ts";
+import { promptEditHeadersConfig } from "./prompts/headers.ts";
 import { promptScope } from "./prompts/scope.ts";
 import {
   groupInstalledServersByName,
   type GroupedInstalledServer,
 } from "./utils/group-installed-servers.ts";
 
+export { displayServerDetails, type DisplayServerDetailsOptions };
+
 export interface WizardManageOptions extends McpScopeOptions {
   serverName?: string;
 }
-
-/**
- * Reusable display function for server details with secret masking.
- */
-export const displayServerDetails = ({
-  serverName,
-  config,
-  agents,
-  isGlobal,
-  titlePrefix = "MCP Server Details",
-}: {
-  serverName: string;
-  config: McpServerConfig;
-  agents?: McpAgentType[];
-  isGlobal?: boolean;
-  titlePrefix?: string;
-}): void => {
-  console.log("\n" + pc.cyan(pc.bold(`${titlePrefix}: [${serverName}]`)));
-  if (isGlobal !== undefined) {
-    console.log(`  ${pc.bold("Scope:")} ${isGlobal ? "Global" : "Project"}`);
-  }
-  if (agents && agents.length > 0) {
-    console.log(
-      `  ${pc.bold("Configured Agents:")} ${pc.green(agents.map((a) => getMcpAgentConfig(a).displayName).join(", "))}`,
-    );
-  }
-
-  const isRemote = Boolean(config.url && config.url.length > 0);
-  if (isRemote) {
-    console.log(`  ${pc.bold("Transport:")} ${pc.magenta(config.type ?? "http")}`);
-    console.log(`  ${pc.bold("URL:")} ${pc.dim(config.url ?? "")}`);
-    const headerKeys = Object.keys(config.headers ?? {});
-    if (headerKeys.length > 0) {
-      console.log(`  ${pc.bold("Headers:")} ${pc.cyan(String(headerKeys.length))}`);
-      for (const [k, v] of Object.entries(config.headers ?? {})) {
-        console.log(`    ${pc.bold(k)}: ${pc.dim(maskSecretHeader(k, v))}`);
-      }
-    } else {
-      console.log(`  ${pc.bold("Headers:")} ${pc.dim("(none)")}`);
-    }
-  } else {
-    console.log(`  ${pc.bold("Command:")} ${pc.magenta(config.command ?? "")}`);
-    const argsStr =
-      config.args && config.args.length > 0 ? config.args.join(" ") : "(none)";
-    console.log(`  ${pc.bold("Arguments:")} ${pc.dim(argsStr)}`);
-    const envKeys = Object.keys(config.env ?? {});
-    if (envKeys.length > 0) {
-      console.log(`  ${pc.bold("Environment Variables:")} ${pc.cyan(String(envKeys.length))}`);
-      for (const [k, v] of Object.entries(config.env ?? {})) {
-        console.log(`    ${pc.bold(k)}=${pc.dim(maskSecretValue(k, v))}`);
-      }
-    } else {
-      console.log(`  ${pc.bold("Environment Variables:")} ${pc.dim("(none)")}`);
-    }
-  }
-  console.log();
-};
 
 export interface EditServerConfigOptions extends McpScopeOptions {
   targetGroup: GroupedInstalledServer;
@@ -408,7 +357,8 @@ export const wizardManage = async (options: WizardManageOptions = {}): Promise<v
       serverName: chosenServerName,
       config: targetGroup.config,
       agents: targetGroup.agents,
-      isGlobal,
+      global: isGlobal,
+      hasDivergence: targetGroup.hasDivergence,
     });
 
     const action = await select({

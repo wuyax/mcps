@@ -2,17 +2,18 @@ import { Command } from "commander";
 import pc from "picocolors";
 
 import { groupInstalledServersByName } from "../interactive/utils/group-installed-servers.ts";
-import { displayServerDetails, wizardManage } from "../interactive/wizard-manage.ts";
+import { wizardManage } from "../interactive/wizard-manage.ts";
 import { listInstalledMcpServers } from "../list.ts";
 import type {
   McpAgentType,
-  McpRemoteTransport,
   McpServerConfig,
 } from "../types.ts";
 import { updateMcpServer } from "../update-mcp-server.ts";
+import { displayServerDetails } from "../utils/display-server-details.ts";
 import { logger } from "../utils/logger.ts";
 import { parseKeyValueList } from "../utils/parse-key-value-list.ts";
 import { parseMcpAgentList } from "../utils/parse-mcp-agent-list.ts";
+import { resolveTransport } from "../utils/resolve-transport.ts";
 import { toErrorMessage } from "../utils/to-error-message.ts";
 
 export interface McpManageCliOptions {
@@ -29,12 +30,6 @@ export interface McpManageCliOptions {
   url?: string;
   yes?: boolean;
 }
-
-const resolveTransport = (input: string | undefined): McpRemoteTransport | undefined => {
-  if (!input) return undefined;
-  if (input === "http" || input === "sse") return input;
-  throw new Error(`Unsupported transport "${input}" (expected: http, sse)`);
-};
 
 export const mcpManageCommand = new Command("manage")
   .description("Inspect, modify, and sync installed MCP servers across coding agents")
@@ -92,6 +87,30 @@ export const mcpManageCommand = new Command("manage")
           );
           process.exitCode = 1;
           return;
+        }
+
+        const isCurrentRemote = Boolean(targetGroup.config.url && targetGroup.config.url.length > 0);
+        if (isCurrentRemote && options.command === undefined) {
+          const ignoredStdioFlags: string[] = [];
+          if (options.env !== undefined) ignoredStdioFlags.push("--env");
+          if (options.clearEnv) ignoredStdioFlags.push("--clear-env");
+          if (options.args !== undefined) ignoredStdioFlags.push("--args");
+          if (options.clearArgs) ignoredStdioFlags.push("--clear-args");
+          if (ignoredStdioFlags.length > 0) {
+            logger.warn(
+              `Server "${serverName}" is a remote server. The following stdio flags will be ignored: ${ignoredStdioFlags.join(", ")}. Use --command to switch to stdio mode.`,
+            );
+          }
+        } else if (!isCurrentRemote && options.url === undefined) {
+          const ignoredRemoteFlags: string[] = [];
+          if (options.header !== undefined) ignoredRemoteFlags.push("--header");
+          if (options.clearHeaders) ignoredRemoteFlags.push("--clear-headers");
+          if (options.transport !== undefined) ignoredRemoteFlags.push("--transport");
+          if (ignoredRemoteFlags.length > 0) {
+            logger.warn(
+              `Server "${serverName}" is a stdio server. The following remote flags will be ignored: ${ignoredRemoteFlags.join(", ")}. Use --url to switch to remote mode.`,
+            );
+          }
         }
 
         const incomingDelta: McpServerConfig = {};
@@ -206,7 +225,8 @@ export const mcpManageCommand = new Command("manage")
           serverName,
           config: targetGroup.config,
           agents: targetGroup.agents,
-          isGlobal,
+          global: isGlobal,
+          hasDivergence: targetGroup.hasDivergence,
         });
         return;
       }

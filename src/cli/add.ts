@@ -13,6 +13,7 @@ import { formatAgentList } from "../utils/format-agent-list.ts";
 import { logger } from "../utils/logger.ts";
 import { parseKeyValueList } from "../utils/parse-key-value-list.ts";
 import { parseMcpAgentList } from "../utils/parse-mcp-agent-list.ts";
+import { resolveTransport } from "../utils/resolve-transport.ts";
 import { toErrorMessage } from "../utils/to-error-message.ts";
 
 interface McpAddOptions {
@@ -26,12 +27,6 @@ interface McpAddOptions {
   yes?: boolean;
   all?: boolean;
 }
-
-const resolveTransport = (input: string | undefined): McpRemoteTransport | undefined => {
-  if (!input) return undefined;
-  if (input === "http" || input === "sse") return input;
-  throw new Error(`Unsupported transport "${input}" (expected: http, sse)`);
-};
 
 export const mcpAddCommand = new Command("add")
   .description("Add an MCP server to coding agents")

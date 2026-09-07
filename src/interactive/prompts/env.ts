@@ -2,20 +2,11 @@ import { confirm, input, password, select } from "@inquirer/prompts";
 import pc from "picocolors";
 
 import { logger } from "../../utils/logger.ts";
+import { maskSecretValue, SECRET_KEY_PATTERN } from "../../utils/mask-secret.ts";
 import { promptEditKeyValueConfig } from "./kv.ts";
 import { promptEditorText, readMultilineTextFromTerminal } from "./multiline.ts";
 
-export const SECRET_KEY_PATTERN = /(token|key|secret|password|passwd|auth|credential)/i;
-
-/**
- * Masks sensitive values for secure CLI display.
- */
-export const maskSecretValue = (key: string, value: string): string => {
-  if (!SECRET_KEY_PATTERN.test(key) || value.length <= 4) {
-    return value;
-  }
-  return `${value.slice(0, 2)}***${value.slice(-2)}`;
-};
+export { maskSecretValue, SECRET_KEY_PATTERN };
 
 /**
  * Formats a key-value env record into .env formatted multiline string.

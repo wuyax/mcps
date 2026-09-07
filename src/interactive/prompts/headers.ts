@@ -2,20 +2,11 @@ import { confirm, input, password, select } from "@inquirer/prompts";
 import pc from "picocolors";
 
 import { logger } from "../../utils/logger.ts";
+import { maskSecretHeader, SECRET_HEADER_PATTERN } from "../../utils/mask-secret.ts";
 import { promptEditKeyValueConfig } from "./kv.ts";
 import { promptEditorText, readMultilineTextFromTerminal } from "./multiline.ts";
 
-export const SECRET_HEADER_PATTERN = /(authorization|token|key|secret|auth)/i;
-
-/**
- * Masks sensitive HTTP header values for secure CLI display.
- */
-export const maskSecretHeader = (key: string, value: string): string => {
-  if (!SECRET_HEADER_PATTERN.test(key) || value.length <= 8) {
-    return value;
-  }
-  return `${value.slice(0, 4)}***${value.slice(-3)}`;
-};
+export { maskSecretHeader, SECRET_HEADER_PATTERN };
 
 /**
  * Formats a key-value headers record into multiline Key: Value text.

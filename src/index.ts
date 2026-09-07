@@ -71,6 +71,16 @@ export { mainMenu } from "./interactive/main-menu.ts";
 export { wizardAdd } from "./interactive/wizard-add.ts";
 export {
   displayServerDetails,
+  type DisplayServerDetailsOptions,
+} from "./utils/display-server-details.ts";
+export { resolveTransport } from "./utils/resolve-transport.ts";
+export {
+  maskSecretHeader,
+  maskSecretValue,
+  SECRET_HEADER_PATTERN,
+  SECRET_KEY_PATTERN,
+} from "./utils/mask-secret.ts";
+export {
   promptSwitchServerType,
   wizardManage,
   type EditServerConfigOptions,
@@ -84,15 +94,12 @@ export {
 } from "./interactive/prompts/kv.ts";
 export {
   formatEnvText,
-
-  maskSecretValue,
   parseEnvText,
   promptEditEnvConfig,
   promptEnvConfig,
 } from "./interactive/prompts/env.ts";
 export {
   formatHeadersText,
-  maskSecretHeader,
   parseHeadersText,
   promptEditHeadersConfig,
   promptHeadersConfig,
