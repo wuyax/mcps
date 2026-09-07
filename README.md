@@ -119,13 +119,20 @@ When launched with no arguments, the main menu offers:
 
 1. Prompts for scope (**Project** or **Global**).
 2. Lists all configured MCP servers grouped by server name along with the agents that currently configure them.
-3. Inspects selected server details: transport type, URL or command, arguments, environment variables, and headers.
-4. Allows triggering **Sync / clone to other agents**:
+3. Inspects selected server details: transport type, URL or command, arguments, environment variables, and headers (with secret masking).
+4. Allows triggering **Edit server configuration**:
+   - **Environment Variables (`env`)**: Inspect masked secrets, modify or add variables one-by-one, open in `$EDITOR` with pre-filled `.env` format, paste multiline `.env` definitions (merge or replace), or delete variables.
+   - **Command Arguments (`args`)**: Edit arguments in-place with existing arguments pre-filled.
+   - **Command (`command`)**: Update executable name or binary path.
+   - **Remote Endpoints (`url`, `type`, `headers`)**: Modify remote URLs, toggle HTTP/SSE transport, and manage HTTP headers.
+   - Saves and persists updated configurations to target agent files using native formats and schema dialects.
+5. Allows triggering **Sync / clone to other agents**:
    - Identifies candidate agents that do not currently have the server configured.
    - Filters candidate agents by scope and transport capability.
    - Writes the server configuration to selected targets using their respective native config formats and schema dialects.
 
 ### Remove Wizard (`mcps remove` without name)
+
 
 1. Prompts for scope (**Project** or **Global**).
 2. Lists configured servers for selection.

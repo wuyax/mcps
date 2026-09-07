@@ -127,3 +127,102 @@ describe("parseHeadersText", () => {
     expect(parseHeadersText("no delimiter here")).toEqual({});
   });
 });
+
+import { formatEnvText, maskSecretValue } from "../src/interactive/prompts/env.ts";
+
+describe("formatEnvText and maskSecretValue", () => {
+  it("should format key-value pairs to valid .env text", () => {
+    const env = {
+      DB_HOST: "localhost",
+      API_TOKEN: "my-secret-token",
+      QUERY: "SELECT * FROM users",
+    };
+    const formatted = formatEnvText(env);
+    expect(formatted).toContain("DB_HOST=localhost");
+    expect(formatted).toContain("API_TOKEN=my-secret-token");
+    expect(formatted).toContain('QUERY="SELECT * FROM users"');
+
+    // Round-trip parse test
+    const reparsed = parseEnvText(formatted);
+    expect(reparsed).toEqual(env);
+  });
+
+  it("should mask secrets while preserving normal values", () => {
+    expect(maskSecretValue("GITHUB_TOKEN", "ghp_abcdef123456")).toBe("gh***56");
+    expect(maskSecretValue("DB_PASSWORD", "supersecret123")).toBe("su***23");
+    expect(maskSecretValue("API_KEY", "short")).toBe("sh***rt");
+    expect(maskSecretValue("PORT", "5432")).toBe("5432");
+    expect(maskSecretValue("PUBLIC_NAME", "my-app")).toBe("my-app");
+  });
+});
+
+import { formatArgsString } from "../src/interactive/prompts/args.ts";
+
+describe("formatArgsString", () => {
+  it("should format arguments into a space-separated CLI string with quotes when needed", () => {
+    const args = ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost:5432/my db"];
+    const formatted = formatArgsString(args);
+    expect(formatted).toBe('-y @modelcontextprotocol/server-postgres "postgresql://localhost:5432/my db"');
+
+    // Round-trip parse test
+    const reparsed = parseArgsString(formatted);
+    expect(reparsed).toEqual(args);
+  });
+});
+
+import { formatHeadersText, maskSecretHeader } from "../src/interactive/prompts/headers.ts";
+
+describe("formatHeadersText and maskSecretHeader", () => {
+  it("should format headers into Key: Value lines", () => {
+    const headers = {
+      Authorization: "Bearer token123",
+      "Content-Type": "application/json",
+    };
+    const formatted = formatHeadersText(headers);
+    expect(formatted).toContain("Authorization: Bearer token123");
+    expect(formatted).toContain("Content-Type: application/json");
+
+    // Round-trip parse test
+    const reparsed = parseHeadersText(formatted);
+    expect(reparsed).toEqual(headers);
+  });
+
+  it("should mask secret headers properly", () => {
+    expect(maskSecretHeader("Authorization", "Bearer secret-token-xyz")).toBe("Bear***xyz");
+    expect(maskSecretHeader("X-API-Key", "my-long-api-key-value")).toBe("my-l***lue");
+    expect(maskSecretHeader("Content-Type", "application/json")).toBe("application/json");
+  });
+});
+
+import { parseKeyValueList } from "../src/utils/parse-key-value-list.ts";
+
+describe("parseKeyValueList", () => {
+  it("should parse = separated key-value pairs", () => {
+    const list = ["FOO=bar", "KEY=val=with=equals", "EMPTY="];
+    expect(parseKeyValueList(list, "=")).toEqual({
+      FOO: "bar",
+      KEY: "val=with=equals",
+      EMPTY: "",
+    });
+  });
+
+  it("should parse : separated key-value pairs", () => {
+    const list = ["Authorization: Bearer token", "X-Custom: val:123"];
+    expect(parseKeyValueList(list, ":")).toEqual({
+      Authorization: "Bearer token",
+      "X-Custom": "val:123",
+    });
+  });
+
+  it("should throw on invalid format or empty key", () => {
+    expect(() => parseKeyValueList(["invalid_no_sep"], "=")).toThrow();
+    expect(() => parseKeyValueList(["=noval"], "=")).toThrow();
+  });
+
+  it("should return empty object for undefined or empty list", () => {
+    expect(parseKeyValueList(undefined, "=")).toEqual({});
+    expect(parseKeyValueList([], "=")).toEqual({});
+  });
+});
+
+

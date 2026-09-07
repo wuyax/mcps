@@ -1,10 +1,34 @@
-import { input, password, select } from "@inquirer/prompts";
+import { confirm, input, password, select } from "@inquirer/prompts";
 import pc from "picocolors";
 
 import { logger } from "../../utils/logger.ts";
 import { promptEditorText, readMultilineTextFromTerminal } from "./multiline.ts";
 
-const SECRET_KEY_PATTERN = /(token|key|secret|password|passwd|auth|credential)/i;
+export const SECRET_KEY_PATTERN = /(token|key|secret|password|passwd|auth|credential)/i;
+
+/**
+ * Masks sensitive values for secure CLI display.
+ */
+export const maskSecretValue = (key: string, value: string): string => {
+  if (!SECRET_KEY_PATTERN.test(key) || value.length <= 4) {
+    return value;
+  }
+  return `${value.slice(0, 2)}***${value.slice(-2)}`;
+};
+
+/**
+ * Formats a key-value env record into .env formatted multiline string.
+ */
+export const formatEnvText = (env: Record<string, string>): string => {
+  return Object.entries(env)
+    .map(([key, value]) => {
+      if (/[\s"']/.test(value)) {
+        return `${key}="${value.replace(/"/g, '\\"')}"`;
+      }
+      return `${key}=${value}`;
+    })
+    .join("\n");
+};
 
 /**
  * Parses multiline .env formatted text into a key-value record.
@@ -97,6 +121,7 @@ export const promptEnvConfig = async (
         ? await promptEditorText({
             message: "Paste or edit environment variables in editor, then save and exit:",
             postfix: ".env",
+            defaultText: formatEnvText(env),
           })
         : await readMultilineTextFromTerminal("Paste .env formatted content (multiline supported):");
 
@@ -109,11 +134,7 @@ export const promptEnvConfig = async (
       Object.assign(env, parsed);
       logger.success(`Successfully parsed ${pc.cyan(String(count))} environment variables:`);
       for (const [k, v] of Object.entries(parsed)) {
-        const masked =
-          SECRET_KEY_PATTERN.test(k) && v.length > 4
-            ? `${v.slice(0, 2)}***${v.slice(-2)}`
-            : v;
-        console.log(`  ${pc.bold(k)}=${pc.dim(masked)}`);
+        console.log(`  ${pc.bold(k)}=${pc.dim(maskSecretValue(k, v))}`);
       }
     }
     return env;
@@ -155,3 +176,29 @@ export const promptEnvConfig = async (
 
   return env;
 };
+
+import { promptEditKeyValueConfig } from "./kv.ts";
+
+/**
+ * Dedicated prompt loop for inspecting, modifying, adding, and removing
+ * environment variables of an existing MCP server configuration.
+ */
+export const promptEditEnvConfig = async (
+  currentEnv: Record<string, string> = {},
+): Promise<Record<string, string>> =>
+  promptEditKeyValueConfig(currentEnv, {
+    title: "Environment Variables",
+    itemNoun: "variable",
+    itemsNoun: "environment variables",
+    separator: "=",
+    editorPostfix: ".env",
+    editorMessage: "Edit environment variables in editor, then save and exit:",
+    pasteMessage: "Paste .env formatted content (multiline supported):",
+    keyPromptMessage: "Variable name (Key):",
+    valuePromptMessage: "Value",
+    isSecretKey: (k) => SECRET_KEY_PATTERN.test(k),
+    maskValue: maskSecretValue,
+    formatText: formatEnvText,
+    parseText: parseEnvText,
+  });
+

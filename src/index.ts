@@ -45,7 +45,12 @@ export {
   type TargetResolutionQuery,
   type TargetResolutionResult,
 } from "./resolve-target-agents.ts";
-export { installMcpServerForAgent, installMcpServerForAgents } from "./installer.ts";
+export {
+  installMcpServerForAgent,
+  installMcpServerForAgent as updateMcpServerForAgent,
+  installMcpServerForAgents,
+  installMcpServerForAgents as updateMcpServerForAgents,
+} from "./installer.ts";
 export { resolveMcpConfigTarget } from "./resolve-config-target.ts";
 export { listInstalledMcpServers, listInstalledMcpServers as list } from "./list.ts";
 export {
@@ -57,13 +62,41 @@ export {
 export { removeMcpServer, removeMcpServer as remove, removeMcpServerFromAgent } from "./remove.ts";
 export { mainMenu } from "./interactive/main-menu.ts";
 export { wizardAdd } from "./interactive/wizard-add.ts";
-export { wizardManage } from "./interactive/wizard-manage.ts";
+export {
+  displayServerDetails,
+  wizardManage,
+  type WizardManageOptions,
+} from "./interactive/wizard-manage.ts";
+
 export { wizardRemove } from "./interactive/wizard-remove.ts";
-export { parseEnvText, promptEnvConfig } from "./interactive/prompts/env.ts";
-export { parseHeadersText, promptHeadersConfig } from "./interactive/prompts/headers.ts";
-export { parseArgsString, promptArgsConfig } from "./interactive/prompts/args.ts";
+export {
+  promptEditKeyValueConfig,
+  type PromptEditKeyValueOptions,
+} from "./interactive/prompts/kv.ts";
+export {
+  formatEnvText,
+
+  maskSecretValue,
+  parseEnvText,
+  promptEditEnvConfig,
+  promptEnvConfig,
+} from "./interactive/prompts/env.ts";
+export {
+  formatHeadersText,
+  maskSecretHeader,
+  parseHeadersText,
+  promptEditHeadersConfig,
+  promptHeadersConfig,
+} from "./interactive/prompts/headers.ts";
+export {
+  formatArgsString,
+  parseArgsString,
+  promptArgsConfig,
+  promptEditArgs,
+} from "./interactive/prompts/args.ts";
 export { promptScopeAndAgents } from "./interactive/prompts/agents.ts";
 export { promptScope } from "./interactive/prompts/scope.ts";
+export { mcpManageCommand } from "./cli/manage.ts";
 export {
   groupInstalledServersByName,
   normalizeServerConfig,

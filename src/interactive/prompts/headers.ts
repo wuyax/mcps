@@ -1,10 +1,29 @@
-import { input, password, select } from "@inquirer/prompts";
+import { confirm, input, password, select } from "@inquirer/prompts";
 import pc from "picocolors";
 
 import { logger } from "../../utils/logger.ts";
 import { promptEditorText, readMultilineTextFromTerminal } from "./multiline.ts";
 
-const SECRET_HEADER_PATTERN = /(authorization|token|key|secret|auth)/i;
+export const SECRET_HEADER_PATTERN = /(authorization|token|key|secret|auth)/i;
+
+/**
+ * Masks sensitive HTTP header values for secure CLI display.
+ */
+export const maskSecretHeader = (key: string, value: string): string => {
+  if (!SECRET_HEADER_PATTERN.test(key) || value.length <= 8) {
+    return value;
+  }
+  return `${value.slice(0, 4)}***${value.slice(-3)}`;
+};
+
+/**
+ * Formats a key-value headers record into multiline Key: Value text.
+ */
+export const formatHeadersText = (headers: Record<string, string>): string => {
+  return Object.entries(headers)
+    .map(([key, value]) => `${key}: ${value}`)
+    .join("\n");
+};
 
 /**
  * Parses multiline HTTP headers text (Key: Value or Key=Value) into a Record<string, string>.
@@ -90,6 +109,7 @@ export const promptHeadersConfig = async (
       mode === "editor"
         ? await promptEditorText({
             message: "Paste or edit HTTP headers in editor, then save and exit:",
+            defaultText: formatHeadersText(headers),
           })
         : await readMultilineTextFromTerminal(
             "Paste HTTP headers content (multiline supported, e.g. Authorization: Bearer ...):",
@@ -104,11 +124,7 @@ export const promptHeadersConfig = async (
       Object.assign(headers, parsed);
       logger.success(`Successfully parsed ${pc.cyan(String(count))} headers:`);
       for (const [k, v] of Object.entries(parsed)) {
-        const masked =
-          SECRET_HEADER_PATTERN.test(k) && v.length > 8
-            ? `${v.slice(0, 4)}***${v.slice(-3)}`
-            : v;
-        console.log(`  ${pc.bold(k)}: ${pc.dim(masked)}`);
+        console.log(`  ${pc.bold(k)}: ${pc.dim(maskSecretHeader(k, v))}`);
       }
     }
     return headers;
@@ -150,3 +166,30 @@ export const promptHeadersConfig = async (
 
   return headers;
 };
+
+import { promptEditKeyValueConfig } from "./kv.ts";
+
+/**
+ * Dedicated prompt loop for inspecting, modifying, adding, and removing
+ * HTTP headers of an existing MCP server configuration.
+ */
+export const promptEditHeadersConfig = async (
+  currentHeaders: Record<string, string> = {},
+): Promise<Record<string, string>> =>
+  promptEditKeyValueConfig(currentHeaders, {
+    title: "HTTP Headers",
+    itemNoun: "header",
+    itemsNoun: "HTTP headers",
+    separator: ":",
+    editorMessage: "Edit HTTP headers in editor, then save and exit:",
+    pasteMessage:
+      "Paste HTTP headers content (multiline supported, e.g. Authorization: Bearer ...):",
+    keyPromptMessage: "Header name (e.g. Authorization):",
+    valuePromptMessage: "Header value",
+    isSecretKey: (k) => SECRET_HEADER_PATTERN.test(k),
+    maskValue: maskSecretHeader,
+    formatText: formatHeadersText,
+    parseText: parseHeadersText,
+  });
+
+

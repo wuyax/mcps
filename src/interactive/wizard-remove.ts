@@ -62,6 +62,7 @@ export const wizardRemove = async (options: WizardRemoveOptions = {}): Promise<b
         value: agent,
         checked: true,
       })),
+      loop: false,
       validate: (ans) => (ans.length === 0 ? "Please select at least one agent" : true),
     });
   } else {

@@ -48,7 +48,7 @@ export const wizardAdd = async (initial: WizardAddOptions = {}): Promise<boolean
 
     if (sourceType === "npm") {
       source = await input({
-        message: "Enter npm package name (e.g. @modelcontextprotocol/server-postgres or mcp-server-git):",
+        message: "Enter npm package name (e.g. @modelcontextprotocol/server-postgres):",
         validate: (val) => (val.trim() ? true : "Package name cannot be empty"),
       });
     } else if (sourceType === "remote") {

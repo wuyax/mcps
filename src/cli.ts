@@ -2,6 +2,7 @@ import { Command } from "commander";
 
 import { mcpAddCommand } from "./cli/add.ts";
 import { mcpListCommand } from "./cli/list.ts";
+import { mcpManageCommand } from "./cli/manage.ts";
 import { mcpRemoveCommand } from "./cli/remove.ts";
 
 import { mainMenu } from "./interactive/main-menu.ts";
@@ -18,7 +19,9 @@ const program = new Command()
 
 program.addCommand(mcpAddCommand);
 program.addCommand(mcpListCommand);
+program.addCommand(mcpManageCommand);
 program.addCommand(mcpRemoveCommand);
+
 
 const main = async (): Promise<void> => {
   if (process.argv.length <= 2 && process.stdin.isTTY) {

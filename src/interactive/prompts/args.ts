@@ -45,3 +45,31 @@ export const promptArgsConfig = async (
 
   return parseArgsString(raw.trim());
 };
+
+/**
+ * Formats an array of argument strings into a space-separated CLI string,
+ * quoting arguments containing spaces or quotes.
+ */
+export const formatArgsString = (args: string[]): string => {
+  return args
+    .map((arg) => (arg.includes(" ") || arg.includes('"') ? `"${arg.replace(/"/g, '\\"')}"` : arg))
+    .join(" ");
+};
+
+/**
+ * Dedicated prompt for editing command arguments with current arguments pre-filled.
+ */
+export const promptEditArgs = async (currentArgs: string[] = []): Promise<string[]> => {
+  const defaultStr = formatArgsString(currentArgs);
+  const raw = await input({
+    message: "Edit command arguments (space-separated, wrap paths with spaces in quotes, leave empty to clear):",
+    default: defaultStr,
+  });
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return [];
+  }
+  return parseArgsString(trimmed);
+};
+
