@@ -19,7 +19,7 @@ import {
   promptEnvConfig,
   promptScope,
   promptScopeAndAgents,
-  updateMcpServerForAgent,
+  updateMcpServer,
   wizardAdd,
   wizardManage,
   wizardRemove,
@@ -52,7 +52,7 @@ describe("Interactive modules export and API", () => {
 
     expect(typeof displayServerDetails).toBe("function");
     expect(typeof promptEditKeyValueConfig).toBe("function");
-    expect(typeof updateMcpServerForAgent).toBe("function");
+    expect(typeof updateMcpServer).toBe("function");
 
     expect(mcpManageCommand.name()).toBe("manage");
   });
@@ -115,7 +115,7 @@ describe("Interactive modules export and API", () => {
     expect(remote?.config.url).toBe("https://api.example.com/sse");
   });
 
-  it("should support updating server config env and args via updateMcpServerForAgent", () => {
+  it("should support updating server config env and args in config store", () => {
     const memoryAdapter = new MemoryConfigStoreAdapter();
     const customStore = new AgentConfigStore(memoryAdapter);
 

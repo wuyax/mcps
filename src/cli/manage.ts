@@ -24,6 +24,7 @@ export interface McpManageCliOptions {
   env?: string[];
   clearEnv?: boolean;
   args?: string[];
+  clearArgs?: boolean;
   command?: string;
   url?: string;
   yes?: boolean;
@@ -46,6 +47,7 @@ export const mcpManageCommand = new Command("manage")
   .option("--env <env...>", "Env var for stdio servers (KEY=VALUE), repeatable")
   .option("--clear-env", "Clear all environment variables for stdio servers")
   .option("--args <args...>", "CLI arguments for stdio/package servers")
+  .option("--clear-args", "Clear all arguments for stdio/package servers")
   .option("--command <command>", "Executable command for stdio servers")
   .option("--url <url>", "Remote endpoint URL")
   .option("-y, --yes", "Skip interactive prompts")
@@ -57,6 +59,7 @@ export const mcpManageCommand = new Command("manage")
       const hasModifications =
         options.command !== undefined ||
         options.args !== undefined ||
+        Boolean(options.clearArgs) ||
         options.env !== undefined ||
         Boolean(options.clearEnv) ||
         options.header !== undefined ||
@@ -85,38 +88,38 @@ export const mcpManageCommand = new Command("manage")
           return;
         }
 
-        const updatedConfig: McpServerConfig = {
-          ...targetGroup.config,
-          args: targetGroup.config.args ? [...targetGroup.config.args] : undefined,
-          env: targetGroup.config.env ? { ...targetGroup.config.env } : undefined,
-          headers: targetGroup.config.headers ? { ...targetGroup.config.headers } : undefined,
-        };
+        const incomingDelta: McpServerConfig = {};
 
         if (options.command !== undefined) {
-          updatedConfig.command = options.command;
+          incomingDelta.command = options.command;
+        }
+        if (options.clearArgs) {
+          incomingDelta.args = undefined;
         }
         if (options.args !== undefined) {
-          updatedConfig.args = options.args;
+          incomingDelta.args = options.args;
         }
         if (options.url !== undefined) {
-          updatedConfig.url = options.url;
+          incomingDelta.url = options.url;
         }
         if (options.transport !== undefined) {
-          updatedConfig.type = resolveTransport(options.transport);
+          incomingDelta.type = resolveTransport(options.transport);
         }
         if (options.clearEnv) {
-          updatedConfig.env = undefined;
+          incomingDelta.env = undefined;
         }
         if (options.env !== undefined) {
           const parsedEnv = parseKeyValueList(options.env, "=");
-          updatedConfig.env = { ...(updatedConfig.env ?? {}), ...parsedEnv };
+          const baseEnv = options.clearEnv ? {} : (targetGroup.config.env ?? {});
+          incomingDelta.env = { ...baseEnv, ...parsedEnv };
         }
         if (options.clearHeaders) {
-          updatedConfig.headers = undefined;
+          incomingDelta.headers = undefined;
         }
         if (options.header !== undefined) {
           const parsedHeaders = parseKeyValueList(options.header, ":");
-          updatedConfig.headers = { ...(updatedConfig.headers ?? {}), ...parsedHeaders };
+          const baseHeaders = options.clearHeaders ? {} : (targetGroup.config.headers ?? {});
+          incomingDelta.headers = { ...baseHeaders, ...parsedHeaders };
         }
 
         const targetAgents: McpAgentType[] | undefined = options.agent
@@ -125,7 +128,7 @@ export const mcpManageCommand = new Command("manage")
 
         const updateResult = updateMcpServer({
           serverName,
-          config: updatedConfig,
+          config: incomingDelta,
           previousConfig: targetGroup.config,
           agents: targetAgents,
           global: isGlobal,

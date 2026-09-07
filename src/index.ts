@@ -47,9 +47,7 @@ export {
 } from "./resolve-target-agents.ts";
 export {
   installMcpServerForAgent,
-  installMcpServerForAgent as updateMcpServerForAgent,
   installMcpServerForAgents,
-  installMcpServerForAgents as updateMcpServerForAgents,
 } from "./installer.ts";
 export { resolveMcpConfigTarget } from "./resolve-config-target.ts";
 export { listInstalledMcpServers, listInstalledMcpServers as list } from "./list.ts";
@@ -62,6 +60,8 @@ export {
 export { removeMcpServer, removeMcpServer as remove, removeMcpServerFromAgent } from "./remove.ts";
 export {
   sanitizeUpdatedServerConfig,
+  toRemoteServerConfig,
+  toStdioServerConfig,
   updateMcpServer,
   updateMcpServer as update,
 } from "./update-mcp-server.ts";

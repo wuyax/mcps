@@ -88,15 +88,15 @@ export const displayServerDetails = ({
   console.log();
 };
 
-const handleEditServerConfig = async ({
-  targetGroup,
-  isGlobal,
-  cwd,
-}: {
+export interface EditServerConfigOptions extends McpScopeOptions {
   targetGroup: GroupedInstalledServer;
-  isGlobal: boolean;
-  cwd: string;
-}): Promise<void> => {
+}
+
+const handleEditServerConfig = async (options: EditServerConfigOptions): Promise<void> => {
+  const { targetGroup } = options;
+  const isGlobal = options.global ?? false;
+  const cwd = options.cwd ?? process.cwd();
+
   const serverName = targetGroup.serverName;
   let workingConfig: McpServerConfig = {
     ...targetGroup.config,
@@ -314,7 +314,6 @@ const handleEditServerConfig = async ({
 
       if (updatedAny) {
         targetGroup.config = updateResult.config;
-        targetGroup.agents = targetGroup.agents.filter((a) => succeededAgents.includes(a));
         logger.success(`Configuration for [${serverName}] updated successfully!`);
         return;
       }
@@ -340,6 +339,15 @@ export const wizardManage = async (options: WizardManageOptions = {}): Promise<v
 
   const grouped = groupInstalledServersByName(installed);
   let pendingServerName = options.serverName;
+
+  const refreshGroupedServers = (): void => {
+    const freshInstalled = listInstalledMcpServers({ global: isGlobal, cwd });
+    const freshGrouped = groupInstalledServersByName(freshInstalled);
+    grouped.clear();
+    for (const [name, grp] of freshGrouped) {
+      grouped.set(name, grp);
+    }
+  };
 
   while (true) {
     let chosenServerName: string;
@@ -405,12 +413,12 @@ export const wizardManage = async (options: WizardManageOptions = {}): Promise<v
     if (action === "edit") {
       await handleEditServerConfig({
         targetGroup,
-        isGlobal,
+        global: isGlobal,
         cwd,
       });
+      refreshGroupedServers();
       continue;
     }
-
 
     if (action === "sync") {
       const allAllowedAgents = isGlobal
@@ -470,6 +478,7 @@ export const wizardManage = async (options: WizardManageOptions = {}): Promise<v
           logger.error(`${pc.cyan(res.agent)}: Sync failed - ${res.error}`);
         }
       }
+      refreshGroupedServers();
     }
   }
 };

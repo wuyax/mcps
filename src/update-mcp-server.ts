@@ -3,11 +3,46 @@ import { listInstalledMcpServers } from "./list.ts";
 import { resolveTargetAgents } from "./resolve-target-agents.ts";
 import type {
   McpInstallResultForAgent,
+  McpRemoteTransport,
   McpServerConfig,
   McpTransportType,
   UpdateMcpServerOptions,
   UpdateMcpServerResult,
 } from "./types.ts";
+
+/**
+ * Transforms a server configuration into a clean remote configuration,
+ * stripping stdio-exclusive fields (command, args, env).
+ */
+export const toRemoteServerConfig = (
+  config: McpServerConfig,
+  defaultTransport: McpRemoteTransport = "http",
+): McpServerConfig => {
+  const {
+    command: _droppedCommand,
+    args: _droppedArgs,
+    env: _droppedEnv,
+    ...remoteConfig
+  } = config;
+  return {
+    ...remoteConfig,
+    type: remoteConfig.type ?? defaultTransport,
+  };
+};
+
+/**
+ * Transforms a server configuration into a clean stdio configuration,
+ * stripping remote-exclusive fields (url, type, headers).
+ */
+export const toStdioServerConfig = (config: McpServerConfig): McpServerConfig => {
+  const {
+    url: _droppedUrl,
+    type: _droppedType,
+    headers: _droppedHeaders,
+    ...stdioConfig
+  } = config;
+  return stdioConfig;
+};
 
 /**
  * Strips obsolete fields when switching between stdio and remote protocols.
@@ -20,47 +55,32 @@ export const sanitizeUpdatedServerConfig = (
 ): McpServerConfig => {
   if (!previous) {
     if (incoming.url) {
-      const { command: _c, args: _a, env: _e, ...remoteConfig } = incoming;
-      return {
-        ...remoteConfig,
-        type: remoteConfig.type ?? "http",
-      };
+      return toRemoteServerConfig(incoming);
     }
-    const { url: _u, type: _t, headers: _h, ...stdioConfig } = incoming;
-    return stdioConfig;
+    return toStdioServerConfig(incoming);
   }
 
   const isSwitchingToRemote = Boolean(incoming.url) && !incoming.command;
   const isSwitchingToStdio = Boolean(incoming.command) && !incoming.url;
 
   if (isSwitchingToRemote) {
-    const { command: _c, args: _a, env: _e, ...rest } = previous;
-    const merged = { ...rest, ...incoming };
-    return {
-      ...merged,
-      type: incoming.type ?? previous.type ?? "http",
-    };
+    const cleanPrevious = toRemoteServerConfig(previous, incoming.type ?? previous.type);
+    const merged = { ...cleanPrevious, ...incoming };
+    return toRemoteServerConfig(merged, incoming.type ?? previous.type);
   }
 
   if (isSwitchingToStdio) {
-    const { url: _u, type: _t, headers: _h, ...rest } = previous;
-    return {
-      ...rest,
-      ...incoming,
-    };
+    const cleanPrevious = toStdioServerConfig(previous);
+    const merged = { ...cleanPrevious, ...incoming };
+    return toStdioServerConfig(merged);
   }
 
   const merged = { ...previous, ...incoming };
   if (merged.url && !incoming.command) {
-    const { command: _c, args: _a, env: _e, ...remoteConfig } = merged;
-    return {
-      ...remoteConfig,
-      type: remoteConfig.type ?? "http",
-    };
+    return toRemoteServerConfig(merged, incoming.type ?? previous.type);
   }
   if (merged.command && !incoming.url) {
-    const { url: _u, type: _t, headers: _h, ...stdioConfig } = merged;
-    return stdioConfig;
+    return toStdioServerConfig(merged);
   }
 
   return merged;

@@ -256,4 +256,93 @@ describe("CLI manage clear flags", () => {
       process.chdir(origCwd);
     }
   });
+
+  it("clears args using --clear-args flag", async () => {
+    installMcpServer({
+      source: "node server.js",
+      name: "args-srv",
+      agents: ["cursor"],
+      args: ["--port", "8080"],
+      cwd,
+    });
+
+    const origCwd = process.cwd();
+    try {
+      process.chdir(cwd);
+      await mcpManageCommand.parseAsync(["node", "test", "args-srv", "--clear-args", "-a", "cursor"]);
+
+      const listed = listInstalledMcpServers({ cwd, agents: ["cursor"] });
+      expect(listed[0].serverConfig?.args).toBeUndefined();
+    } finally {
+      process.chdir(origCwd);
+    }
+  });
+
+  it("switches from stdio to remote via CLI without leaving dirty fields", async () => {
+    installMcpServer({
+      source: "node server.js",
+      name: "switch-srv",
+      agents: ["cursor"],
+      args: ["--arg1"],
+      env: { FOO: "bar" },
+      cwd,
+    });
+
+    const origCwd = process.cwd();
+    try {
+      process.chdir(cwd);
+      await mcpManageCommand.parseAsync([
+        "node",
+        "test",
+        "switch-srv",
+        "--url",
+        "https://api.example.com/mcp",
+        "-a",
+        "cursor",
+      ]);
+
+      const listed = listInstalledMcpServers({ cwd, agents: ["cursor"] });
+      expect(listed[0].serverConfig?.url).toBe("https://api.example.com/mcp");
+      expect(listed[0].serverConfig?.command).toBeUndefined();
+      expect(listed[0].serverConfig?.args).toBeUndefined();
+      expect(listed[0].serverConfig?.env).toBeUndefined();
+    } finally {
+      process.chdir(origCwd);
+    }
+  });
+
+  it("switches from remote to stdio via CLI without leaving dirty fields", async () => {
+    installMcpServer({
+      source: "https://api.example.com/mcp",
+      name: "remote-switch-srv",
+      agents: ["cursor"],
+      headers: { Authorization: "Bearer xyz" },
+      cwd,
+    });
+
+    const origCwd = process.cwd();
+    try {
+      process.chdir(cwd);
+      await mcpManageCommand.parseAsync([
+        "node",
+        "test",
+        "remote-switch-srv",
+        "--command",
+        "npx",
+        "--args",
+        "-y",
+        "my-server",
+        "-a",
+        "cursor",
+      ]);
+
+      const listed = listInstalledMcpServers({ cwd, agents: ["cursor"] });
+      expect(listed[0].serverConfig?.command).toBe("npx");
+      expect(listed[0].serverConfig?.args).toEqual(["-y", "my-server"]);
+      expect(listed[0].serverConfig?.url).toBeUndefined();
+      expect(listed[0].serverConfig?.headers).toBeUndefined();
+    } finally {
+      process.chdir(origCwd);
+    }
+  });
 });
