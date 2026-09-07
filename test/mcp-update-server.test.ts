@@ -7,6 +7,7 @@ import { installMcpServer } from "../src/install-mcp-server.ts";
 import { listInstalledMcpServers } from "../src/list.ts";
 import { mcpManageCommand } from "../src/cli/manage.ts";
 import {
+  detectUpdateTransition,
   sanitizeUpdatedServerConfig,
   updateMcpServer,
 } from "../src/update-mcp-server.ts";
@@ -91,6 +92,40 @@ describe("sanitizeUpdatedServerConfig", () => {
     const cleanedStdio = sanitizeUpdatedServerConfig(dirtyStdio);
     expect(cleanedStdio.command).toBe("python");
     expect(cleanedStdio.headers).toBeUndefined();
+  });
+
+  it("detects transition categories correctly via detectUpdateTransition", () => {
+    // switch-to-remote
+    expect(
+      detectUpdateTransition(
+        { url: "https://example.com" },
+        { command: "node" },
+      ),
+    ).toBe("switch-to-remote");
+
+    // switch-to-stdio
+    expect(
+      detectUpdateTransition(
+        { command: "node" },
+        { url: "https://example.com" },
+      ),
+    ).toBe("switch-to-stdio");
+
+    // merge-remote
+    expect(
+      detectUpdateTransition(
+        { headers: { Authorization: "Bearer 1" } },
+        { url: "https://example.com" },
+      ),
+    ).toBe("merge-remote");
+
+    // merge-stdio
+    expect(
+      detectUpdateTransition(
+        { env: { PORT: "8080" } },
+        { command: "node", args: ["index.js"] },
+      ),
+    ).toBe("merge-stdio");
   });
 });
 
@@ -342,6 +377,38 @@ describe("CLI manage clear flags", () => {
       expect(listed[0].serverConfig?.url).toBeUndefined();
       expect(listed[0].serverConfig?.headers).toBeUndefined();
     } finally {
+      process.chdir(origCwd);
+    }
+  });
+
+  it("rejects simultaneous --url and --command with exit code 1", async () => {
+    installMcpServer({
+      source: "node server.js",
+      name: "conflict-srv",
+      agents: ["cursor"],
+      cwd,
+    });
+
+    const origCwd = process.cwd();
+    const origExitCode = process.exitCode;
+    try {
+      process.chdir(cwd);
+      process.exitCode = undefined;
+      await mcpManageCommand.parseAsync([
+        "node",
+        "test",
+        "conflict-srv",
+        "--url",
+        "https://example.com",
+        "--command",
+        "node",
+        "-a",
+        "cursor",
+      ]);
+
+      expect(process.exitCode).toBe(1);
+    } finally {
+      process.exitCode = origExitCode;
       process.chdir(origCwd);
     }
   });

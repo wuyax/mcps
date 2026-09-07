@@ -70,6 +70,12 @@ export const mcpManageCommand = new Command("manage")
       const isInteractive = Boolean(process.stdin.isTTY && !options.yes);
 
       if (hasModifications) {
+        if (options.url !== undefined && options.command !== undefined) {
+          logger.error('Cannot specify both "--url" (remote) and "--command" (stdio) simultaneously.');
+          process.exitCode = 1;
+          return;
+        }
+
         if (!serverName) {
           logger.error('Missing required argument: "server-name" when passing modification flags.');
           process.exitCode = 1;

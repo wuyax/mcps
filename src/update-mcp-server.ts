@@ -44,6 +44,34 @@ export const toStdioServerConfig = (config: McpServerConfig): McpServerConfig =>
   return stdioConfig;
 };
 
+export type UpdateTransitionType =
+  | "switch-to-remote"
+  | "switch-to-stdio"
+  | "merge-remote"
+  | "merge-stdio";
+
+/**
+ * Determines the transition category when updating an MCP server configuration.
+ */
+export const detectUpdateTransition = (
+  incoming: McpServerConfig,
+  previous?: McpServerConfig,
+): UpdateTransitionType => {
+  if (!previous) {
+    return incoming.url ? "switch-to-remote" : "switch-to-stdio";
+  }
+  if (incoming.url && !incoming.command) {
+    return "switch-to-remote";
+  }
+  if (incoming.command && !incoming.url) {
+    return "switch-to-stdio";
+  }
+  if (incoming.url || (!incoming.command && previous.url)) {
+    return "merge-remote";
+  }
+  return "merge-stdio";
+};
+
 /**
  * Strips obsolete fields when switching between stdio and remote protocols.
  * When switching to remote (url is provided), stdio fields (command, args, env) are removed.
@@ -53,37 +81,25 @@ export const sanitizeUpdatedServerConfig = (
   incoming: McpServerConfig,
   previous?: McpServerConfig,
 ): McpServerConfig => {
-  if (!previous) {
-    if (incoming.url) {
-      return toRemoteServerConfig(incoming);
+  const transition = detectUpdateTransition(incoming, previous);
+  const targetTransport = incoming.type ?? previous?.type ?? "http";
+
+  switch (transition) {
+    case "switch-to-remote": {
+      const cleanBase = previous ? toRemoteServerConfig(previous, targetTransport) : {};
+      return toRemoteServerConfig({ ...cleanBase, ...incoming }, targetTransport);
     }
-    return toStdioServerConfig(incoming);
+    case "switch-to-stdio": {
+      const cleanBase = previous ? toStdioServerConfig(previous) : {};
+      return toStdioServerConfig({ ...cleanBase, ...incoming });
+    }
+    case "merge-remote": {
+      return toRemoteServerConfig({ ...previous, ...incoming }, targetTransport);
+    }
+    case "merge-stdio": {
+      return toStdioServerConfig({ ...previous, ...incoming });
+    }
   }
-
-  const isSwitchingToRemote = Boolean(incoming.url) && !incoming.command;
-  const isSwitchingToStdio = Boolean(incoming.command) && !incoming.url;
-
-  if (isSwitchingToRemote) {
-    const cleanPrevious = toRemoteServerConfig(previous, incoming.type ?? previous.type);
-    const merged = { ...cleanPrevious, ...incoming };
-    return toRemoteServerConfig(merged, incoming.type ?? previous.type);
-  }
-
-  if (isSwitchingToStdio) {
-    const cleanPrevious = toStdioServerConfig(previous);
-    const merged = { ...cleanPrevious, ...incoming };
-    return toStdioServerConfig(merged);
-  }
-
-  const merged = { ...previous, ...incoming };
-  if (merged.url && !incoming.command) {
-    return toRemoteServerConfig(merged, incoming.type ?? previous.type);
-  }
-  if (merged.command && !incoming.url) {
-    return toStdioServerConfig(merged);
-  }
-
-  return merged;
 };
 
 /**

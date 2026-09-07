@@ -59,17 +59,21 @@ export {
 } from "./source-parser.ts";
 export { removeMcpServer, removeMcpServer as remove, removeMcpServerFromAgent } from "./remove.ts";
 export {
+  detectUpdateTransition,
   sanitizeUpdatedServerConfig,
   toRemoteServerConfig,
   toStdioServerConfig,
   updateMcpServer,
   updateMcpServer as update,
+  type UpdateTransitionType,
 } from "./update-mcp-server.ts";
 export { mainMenu } from "./interactive/main-menu.ts";
 export { wizardAdd } from "./interactive/wizard-add.ts";
 export {
   displayServerDetails,
+  promptSwitchServerType,
   wizardManage,
+  type EditServerConfigOptions,
   type WizardManageOptions,
 } from "./interactive/wizard-manage.ts";
 

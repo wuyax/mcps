@@ -92,6 +92,57 @@ export interface EditServerConfigOptions extends McpScopeOptions {
   targetGroup: GroupedInstalledServer;
 }
 
+/**
+ * Interactive prompt flow to switch an MCP server between stdio and remote protocols.
+ */
+export const promptSwitchServerType = async (
+  currentConfig: McpServerConfig,
+  serverName: string,
+): Promise<McpServerConfig> => {
+  const isRemote = Boolean(currentConfig.url && currentConfig.url.length > 0);
+  if (isRemote) {
+    const newCmd = await input({
+      message: "Executable command (e.g. node, npx):",
+      validate: (val) => (val.trim() ? true : "Command cannot be empty"),
+    });
+    const newArgs = await promptEditArgs([]);
+    const newEnv = await promptEditEnvConfig({});
+    logger.success(`Switched [${serverName}] configuration to stdio mode`);
+    return {
+      command: newCmd.trim(),
+      args: newArgs.length > 0 ? newArgs : undefined,
+      env: Object.keys(newEnv).length > 0 ? newEnv : undefined,
+    };
+  }
+
+  const newUrl = await input({
+    message: "Remote server URL:",
+    validate: (val) => {
+      const trimmed = val.trim();
+      if (!trimmed) return "URL cannot be empty";
+      if (!/^https?:\/\//i.test(trimmed)) {
+        return "Please enter a valid URL starting with http:// or https://";
+      }
+      return true;
+    },
+  });
+  const transport = await select<McpRemoteTransport>({
+    message: "Select remote transport protocol:",
+    choices: [
+      { name: "HTTP", value: "http" },
+      { name: "SSE (Server-Sent Events)", value: "sse" },
+    ],
+    default: "http",
+  });
+  const newHeaders = await promptEditHeadersConfig({});
+  logger.success(`Switched [${serverName}] configuration to remote mode`);
+  return {
+    url: newUrl.trim(),
+    type: transport,
+    headers: Object.keys(newHeaders).length > 0 ? newHeaders : undefined,
+  };
+};
+
 const handleEditServerConfig = async (options: EditServerConfigOptions): Promise<void> => {
   const { targetGroup } = options;
   const isGlobal = options.global ?? false;
@@ -156,47 +207,7 @@ const handleEditServerConfig = async (options: EditServerConfigOptions): Promise
     }
 
     if (editAction === "switch_type") {
-      if (isRemote) {
-        const newCmd = await input({
-          message: "Executable command (e.g. node, npx):",
-          validate: (val) => (val.trim() ? true : "Command cannot be empty"),
-        });
-        const newArgs = await promptEditArgs([]);
-        const newEnv = await promptEditEnvConfig({});
-        workingConfig = {
-          command: newCmd.trim(),
-          args: newArgs.length > 0 ? newArgs : undefined,
-          env: Object.keys(newEnv).length > 0 ? newEnv : undefined,
-        };
-        logger.success(`Switched [${serverName}] configuration to stdio mode`);
-      } else {
-        const newUrl = await input({
-          message: "Remote server URL:",
-          validate: (val) => {
-            const trimmed = val.trim();
-            if (!trimmed) return "URL cannot be empty";
-            if (!/^https?:\/\//i.test(trimmed)) {
-              return "Please enter a valid URL starting with http:// or https://";
-            }
-            return true;
-          },
-        });
-        const transport = await select<McpRemoteTransport>({
-          message: "Select remote transport protocol:",
-          choices: [
-            { name: "HTTP", value: "http" },
-            { name: "SSE (Server-Sent Events)", value: "sse" },
-          ],
-          default: "http",
-        });
-        const newHeaders = await promptEditHeadersConfig({});
-        workingConfig = {
-          url: newUrl.trim(),
-          type: transport,
-          headers: Object.keys(newHeaders).length > 0 ? newHeaders : undefined,
-        };
-        logger.success(`Switched [${serverName}] configuration to remote mode`);
-      }
+      workingConfig = await promptSwitchServerType(workingConfig, serverName);
       continue;
     }
 
@@ -250,6 +261,16 @@ const handleEditServerConfig = async (options: EditServerConfigOptions): Promise
           loop: false,
           validate: (ans) => (ans.length === 0 ? "Please select at least one agent" : true),
         });
+
+        if (targetAgents.length < targetGroup.agents.length) {
+          const unselected = targetGroup.agents.filter((a) => !targetAgents.includes(a));
+          const unselectedNames = unselected
+            .map((a) => getMcpAgentConfig(a).displayName)
+            .join(", ");
+          logger.info(
+            `Note: Updating only a subset of agents. Server configurations will diverge from: ${unselectedNames}.`,
+          );
+        }
       }
 
       const requestedTransport: McpTransportType = workingConfig.url
