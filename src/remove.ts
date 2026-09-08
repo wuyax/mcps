@@ -75,8 +75,6 @@ export const removeMcpServer = (options: RemoveMcpServerOptions): RemoveMcpServe
           agent: agentType,
           path: cluster.configPath,
           removed: false,
-          coAffectedAgents:
-            cluster.coHostedAgents.length > 0 ? cluster.coHostedAgents : undefined,
           error: errorMsg,
         });
       }

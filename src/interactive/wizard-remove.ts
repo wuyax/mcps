@@ -4,7 +4,7 @@ import pc from "picocolors";
 import { getMcpAgentConfig } from "../agents.ts";
 import { listInstalledMcpServers } from "../list.ts";
 import { removeMcpServer } from "../remove.ts";
-import { getCoHostedAgents, sortAgentsWithClusters } from "../resolve-config-clusters.ts";
+import { sortAgentsWithClusters } from "../resolve-config-clusters.ts";
 import type { McpAgentType, McpScopeOptions } from "../types.ts";
 import { logger } from "../utils/logger.ts";
 

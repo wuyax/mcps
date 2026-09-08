@@ -88,3 +88,39 @@ export const installMcpServerForAgents = (
 
   return agentTypes.map((agentType) => resultsByAgent.get(agentType)!);
 };
+
+export interface InstallToCompatibleAgentsOptions extends McpScopeOptions {
+  allAgents: McpAgentType[];
+  incompatible?: Array<{ agent: McpAgentType; reason: string }>;
+}
+
+export const installToCompatibleAgents = (
+  serverName: string,
+  serverConfig: McpServerConfig,
+  options: InstallToCompatibleAgentsOptions,
+): McpInstallResultForAgent[] => {
+  const { allAgents, incompatible = [], global: isGlobal, cwd } = options;
+  const incompatibleMap = new Map(incompatible.map((item) => [item.agent, item.reason]));
+  const compatibleAgents = allAgents.filter((a) => !incompatibleMap.has(a));
+
+  const installedResults = installMcpServerForAgents(serverName, serverConfig, compatibleAgents, {
+    global: isGlobal,
+    cwd,
+  });
+  const installedMap = new Map(installedResults.map((r) => [r.agent, r]));
+
+  return allAgents.map((agentType) => {
+    const incompatibleReason = incompatibleMap.get(agentType);
+    if (incompatibleReason) {
+      return {
+        agent: agentType,
+        success: false,
+        path: "",
+        error: incompatibleReason,
+      };
+    }
+
+    return installedMap.get(agentType)!;
+  });
+};
+

@@ -1,4 +1,4 @@
-import { checkbox, confirm, input, select } from "@inquirer/prompts";
+import { confirm, input, select } from "@inquirer/prompts";
 import pc from "picocolors";
 
 import {
@@ -7,6 +7,7 @@ import {
   getMcpAgentTypes,
 } from "../agents.ts";
 import { listInstalledMcpServers } from "../list.ts";
+import { sortAgentsWithClusters } from "../resolve-config-clusters.ts";
 import { resolveTargetAgents } from "../resolve-target-agents.ts";
 import type {
   McpAgentType,
@@ -25,7 +26,9 @@ import { logger } from "../utils/logger.ts";
 import { promptEditArgs } from "./prompts/args.ts";
 import { promptEditEnvConfig } from "./prompts/env.ts";
 import { promptEditHeadersConfig } from "./prompts/headers.ts";
+import { linkedCheckbox } from "./prompts/linked-checkbox.ts";
 import { promptScope } from "./prompts/scope.ts";
+import { buildLinkedAgentChoices } from "./utils/build-linked-agent-choices.ts";
 import {
   groupInstalledServersByName,
   type GroupedInstalledServer,
@@ -200,13 +203,16 @@ const handleEditServerConfig = async (options: EditServerConfigOptions): Promise
       let targetAgents: McpAgentType[] = targetGroup.agents;
 
       if (targetGroup.agents.length > 1) {
-        targetAgents = await checkbox<McpAgentType>({
+        const sortedAgents = sortAgentsWithClusters(targetGroup.agents, { global: isGlobal, cwd });
+        const choices = buildLinkedAgentChoices({
+          agents: sortedAgents,
+          checkedAgents: sortedAgents,
+          scopeOptions: { global: isGlobal, cwd },
+        });
+
+        targetAgents = await linkedCheckbox<McpAgentType>({
           message: "Select agents to update configuration (Space to toggle):",
-          choices: targetGroup.agents.map((a) => ({
-            name: `${getMcpAgentConfig(a).displayName} (${a})`,
-            value: a,
-            checked: true,
-          })),
+          choices,
           loop: false,
           validate: (ans) => (ans.length === 0 ? "Please select at least one agent" : true),
         });
@@ -396,22 +402,25 @@ export const wizardManage = async (options: WizardManageOptions = {}): Promise<v
         ? getMcpAgentTypes()
         : getMcpAgentsSupportingProjectScope();
 
-      const candidateAgents = allAllowedAgents.filter((a) => !targetGroup.agents.includes(a));
+      const rawCandidateAgents = allAllowedAgents.filter((a) => !targetGroup.agents.includes(a));
 
-      if (candidateAgents.length === 0) {
+      if (rawCandidateAgents.length === 0) {
         logger.info(
           "All supported agents in this scope already have this MCP server configured; no sync needed",
         );
         continue;
       }
 
-      const selectedToSync = await checkbox<McpAgentType>({
+      const candidateAgents = sortAgentsWithClusters(rawCandidateAgents, { global: isGlobal, cwd });
+      const choices = buildLinkedAgentChoices({
+        agents: candidateAgents,
+        checkedAgents: [],
+        scopeOptions: { global: isGlobal, cwd },
+      });
+
+      const selectedToSync = await linkedCheckbox<McpAgentType>({
         message: "Select target agents to sync to (Space to select):",
-        choices: candidateAgents.map((a) => ({
-          name: `${getMcpAgentConfig(a).displayName} (${a})`,
-          value: a,
-          checked: false,
-        })),
+        choices,
         loop: false,
         validate: (ans) => (ans.length === 0 ? "Please select at least one agent" : true),
       });

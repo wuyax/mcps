@@ -20,7 +20,17 @@ export const buildLinkedAgentChoices = (
   options: BuildLinkedAgentChoicesOptions,
 ): LinkedChoice<McpAgentType>[] => {
   const { agents, checkedAgents, detectedAgents = [], scopeOptions = {} } = options;
-  const checkedSet = new Set(checkedAgents);
+
+  // Align initial checked state: if an agent is selected, its co-hosted agents must also be initially selected
+  const alignedCheckedSet = new Set<McpAgentType>(checkedAgents);
+  for (const agent of checkedAgents) {
+    const coHosted = getCoHostedAgents(agent, scopeOptions);
+    for (const co of coHosted) {
+      if (agents.includes(co)) {
+        alignedCheckedSet.add(co);
+      }
+    }
+  }
 
   return agents.map((agent) => {
     const config = getMcpAgentConfig(agent);
@@ -37,7 +47,7 @@ export const buildLinkedAgentChoices = (
     return {
       name: label,
       value: agent,
-      checked: checkedSet.has(agent),
+      checked: alignedCheckedSet.has(agent),
       linkedValues: coHosted,
       description:
         coHosted.length > 0

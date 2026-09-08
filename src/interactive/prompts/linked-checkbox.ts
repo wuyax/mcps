@@ -79,7 +79,7 @@ const defaultTheme: LinkedCheckboxTheme = {
     keysHelpTip: (keys: [key: string, action: string][]) =>
       keys
         .map(([key, action]) => `${pc.bold(key)} ${pc.dim(action)}`)
-        .join(pc.dim(" • ")),
+        .join(pc.dim(" | ")),
     highlight: (text: string) => pc.cyan(text),
   },
   i18n: {
@@ -307,11 +307,11 @@ export const linkedCheckbox: LinkedCheckboxPrompt = createPrompt(
     }
 
     const helpLine = theme.style.keysHelpTip([
-      ["↑↓", "navigate"],
+      ["up/down", "navigate"],
       ["space", "toggle"],
       ["a", "all"],
       ["i", "invert"],
-      ["⏎", "submit"],
+      ["enter", "submit"],
     ]);
 
     const lines = [

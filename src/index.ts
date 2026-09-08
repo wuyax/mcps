@@ -48,6 +48,8 @@ export {
 export {
   installMcpServerForAgent,
   installMcpServerForAgents,
+  installToCompatibleAgents,
+  type InstallToCompatibleAgentsOptions,
 } from "./installer.ts";
 export { resolveMcpConfigTarget } from "./resolve-config-target.ts";
 export {

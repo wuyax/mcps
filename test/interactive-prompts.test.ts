@@ -247,13 +247,26 @@ describe("buildLinkedAgentChoices", () => {
     expect(agyChoice?.name).toContain("[shared: antigravity-cli]");
     expect(agyChoice?.description).toContain("Antigravity CLI");
 
-    expect(cliChoice?.checked).toBe(false);
+    // Co-hosted agents have their initial checked state aligned
+    expect(cliChoice?.checked).toBe(true);
     expect(cliChoice?.linkedValues).toContain("antigravity");
     expect(cliChoice?.name).toContain("[shared: antigravity]");
 
     expect(cursorChoice?.checked).toBe(false);
     expect(cursorChoice?.linkedValues).toEqual([]);
     expect(cursorChoice?.description).toBeUndefined();
+  });
+
+  it("leaves all unselected when checkedAgents is empty", () => {
+    const choices = buildLinkedAgentChoices({
+      agents: ["antigravity", "antigravity-cli", "cursor"],
+      checkedAgents: [],
+      scopeOptions: { global: true },
+    });
+
+    for (const choice of choices) {
+      expect(choice.checked).toBe(false);
+    }
   });
 });
 

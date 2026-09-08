@@ -1,10 +1,11 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { removeMcpServer, removeMcpServerFromAgent } from "../src/remove.ts";
 import { installMcpServerForAgents } from "../src/installer.ts";
+import { agentConfigStore } from "../src/config-store.ts";
 
 describe("Co-affected and deduplicated removal", () => {
   let tempDir: string;
@@ -123,6 +124,25 @@ describe("Co-affected and deduplicated removal", () => {
     expect(results[0].removed).toBe(true);
     expect(results[0].coAffectedAgents).toContain("github-copilot-cli");
     expect(results[0].coAffectedAgents).toContain("qoder");
+  });
+
+  it("does not report coAffectedAgents when removal fails with an error", () => {
+    vi.spyOn(agentConfigStore, "removeServer").mockImplementationOnce(() => {
+      throw new Error("Disk permission error");
+    });
+
+    const results = removeMcpServer({
+      name: "anyServer",
+      agents: ["antigravity"],
+      global: false,
+      cwd: tempDir,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0].agent).toBe("antigravity");
+    expect(results[0].removed).toBe(false);
+    expect(results[0].error).toContain("Disk permission error");
+    expect(results[0].coAffectedAgents).toBeUndefined();
   });
 });
 

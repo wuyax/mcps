@@ -5,7 +5,7 @@ import {
   getMcpAgentsSupportingProjectScope,
   getMcpAgentTypes,
 } from "../../agents.ts";
-import { getCoHostedAgents, sortAgentsWithClusters } from "../../resolve-config-clusters.ts";
+import { sortAgentsWithClusters } from "../../resolve-config-clusters.ts";
 import { resolveTargetAgents } from "../../resolve-target-agents.ts";
 import type { McpAgentType, McpScopeOptions } from "../../types.ts";
 import { logger } from "../../utils/logger.ts";
@@ -59,24 +59,13 @@ export const promptScopeAndAgents = async (
     logger.warn(`No active ${isGlobal ? "global" : "project"} agents detected`);
   }
 
-  const rawDefaultChecked = options.defaultAgents && options.defaultAgents.length > 0
+  const defaultChecked = options.defaultAgents && options.defaultAgents.length > 0
     ? options.defaultAgents
     : detected;
 
-  // Align initial checked state: if an agent is selected, its co-hosted agents must also be initially selected
-  const alignedChecked = new Set<McpAgentType>(rawDefaultChecked);
-  for (const agent of rawDefaultChecked) {
-    const coHosted = getCoHostedAgents(agent, { global: isGlobal, cwd });
-    for (const co of coHosted) {
-      if (availableAgentTypes.includes(co)) {
-        alignedChecked.add(co);
-      }
-    }
-  }
-
   const choices = buildLinkedAgentChoices({
     agents: availableAgentTypes,
-    checkedAgents: Array.from(alignedChecked),
+    checkedAgents: defaultChecked,
     detectedAgents: detected,
     scopeOptions: { global: isGlobal, cwd },
   });
