@@ -4,6 +4,7 @@ import pc from "picocolors";
 import { installMcpServer } from "../install-mcp-server.ts";
 import { parseMcpSource } from "../source-parser.ts";
 import type { McpAgentType, McpRemoteTransport, McpScopeOptions } from "../types.ts";
+import { formatCoHostedBadge } from "../utils/co-hosted-feedback.ts";
 import { logger } from "../utils/logger.ts";
 import { promptScopeAndAgents } from "./prompts/agents.ts";
 import { promptArgsConfig } from "./prompts/args.ts";
@@ -184,12 +185,8 @@ export const wizardAdd = async (initial: WizardAddOptions = {}): Promise<boolean
   let allSuccess = true;
   for (const record of result.results) {
     if (record.success) {
-      const coConfiguredNotice =
-        record.coConfiguredAgents && record.coConfiguredAgents.length > 0
-          ? ` ${pc.yellow(`(co-configured: ${record.coConfiguredAgents.join(", ")})`)}`
-          : "";
       logger.success(
-        `${pc.cyan(record.agent)}: Successfully written to ${pc.dim(record.path)}${coConfiguredNotice}`,
+        `${pc.cyan(record.agent)}: Successfully written to ${pc.dim(record.path)}${formatCoHostedBadge("configured", record.coConfiguredAgents)}`,
       );
     } else {
       allSuccess = false;

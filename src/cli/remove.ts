@@ -2,6 +2,7 @@ import { Command } from "commander";
 import pc from "picocolors";
 
 import { removeMcpServer } from "../index.ts";
+import { logCoHostedNotice } from "../utils/co-hosted-feedback.ts";
 import { logger } from "../utils/logger.ts";
 import { parseMcpAgentList } from "../utils/parse-mcp-agent-list.ts";
 import { toErrorMessage } from "../utils/to-error-message.ts";
@@ -57,11 +58,7 @@ export const mcpRemoveCommand = new Command("remove")
           logger.success(
             `${pc.cyan(record.agent)} removed ${pc.bold(name)} ${pc.dim(record.path)}`,
           );
-          if (record.coAffectedAgents && record.coAffectedAgents.length > 0) {
-            logger.info(
-              `  ${pc.dim("Note:")} Also affects co-hosted agent(s): ${pc.yellow(record.coAffectedAgents.join(", "))}`,
-            );
-          }
+          logCoHostedNotice("affected", record.coAffectedAgents);
         } else {
           logger.error(`${pc.cyan(record.agent)}: ${record.error ?? "not found"}`);
         }

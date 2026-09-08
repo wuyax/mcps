@@ -6,6 +6,7 @@ import { listInstalledMcpServers } from "../list.ts";
 import { removeMcpServer } from "../remove.ts";
 import { sortAgentsWithClusters } from "../resolve-config-clusters.ts";
 import type { McpAgentType, McpScopeOptions } from "../types.ts";
+import { formatCoHostedBadge } from "../utils/co-hosted-feedback.ts";
 import { logger } from "../utils/logger.ts";
 
 import { linkedCheckbox } from "./prompts/linked-checkbox.ts";
@@ -100,12 +101,8 @@ export const wizardRemove = async (options: WizardRemoveOptions = {}): Promise<b
   let removedCount = 0;
   for (const res of results) {
     if (res.removed) {
-      const coAffectedNotice =
-        res.coAffectedAgents && res.coAffectedAgents.length > 0
-          ? ` ${pc.yellow(`(co-affected: ${res.coAffectedAgents.join(", ")})`)}`
-          : "";
       logger.success(
-        `${pc.cyan(res.agent)}: Successfully removed from ${pc.dim(res.path)}${coAffectedNotice}`,
+        `${pc.cyan(res.agent)}: Successfully removed from ${pc.dim(res.path)}${formatCoHostedBadge("affected", res.coAffectedAgents)}`,
       );
       removedCount++;
     } else if (res.error) {

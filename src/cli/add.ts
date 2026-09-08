@@ -10,6 +10,7 @@ import {
 } from "../index.ts";
 import { wizardAdd } from "../interactive/wizard-add.ts";
 import { formatAgentList } from "../utils/format-agent-list.ts";
+import { logCoHostedNotice } from "../utils/co-hosted-feedback.ts";
 import { logger } from "../utils/logger.ts";
 import { parseKeyValueList } from "../utils/parse-key-value-list.ts";
 import { parseMcpAgentList } from "../utils/parse-mcp-agent-list.ts";
@@ -125,11 +126,7 @@ export const mcpAddCommand = new Command("add")
       for (const record of result.results) {
         if (record.success) {
           logger.success(`${pc.cyan(record.agent)} ${pc.dim(record.path)}`);
-          if (record.coConfiguredAgents && record.coConfiguredAgents.length > 0) {
-            logger.info(
-              `  ${pc.dim("Note:")} Also configured for co-hosted agent(s): ${pc.yellow(record.coConfiguredAgents.join(", "))}`,
-            );
-          }
+          logCoHostedNotice("configured", record.coConfiguredAgents);
         } else {
           logger.error(`${pc.cyan(record.agent)}: ${record.error}`);
         }

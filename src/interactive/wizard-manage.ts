@@ -21,6 +21,7 @@ import {
   displayServerDetails,
   type DisplayServerDetailsOptions,
 } from "../utils/display-server-details.ts";
+import { formatCoHostedBadge } from "../utils/co-hosted-feedback.ts";
 import { logger } from "../utils/logger.ts";
 
 import { promptEditArgs } from "./prompts/args.ts";
@@ -280,12 +281,8 @@ const handleEditServerConfig = async (options: EditServerConfigOptions): Promise
         if (res.success) {
           updatedAny = true;
           succeededAgents.push(res.agent);
-          const coConfiguredNotice =
-            res.coConfiguredAgents && res.coConfiguredAgents.length > 0
-              ? ` ${pc.yellow(`(co-configured: ${res.coConfiguredAgents.join(", ")})`)}`
-              : "";
           logger.success(
-            `${pc.cyan(res.agent)}: Successfully updated configuration in ${pc.dim(res.path)}${coConfiguredNotice}`,
+            `${pc.cyan(res.agent)}: Successfully updated configuration in ${pc.dim(res.path)}${formatCoHostedBadge("configured", res.coConfiguredAgents)}`,
           );
         } else {
           logger.error(`${pc.cyan(res.agent)}: Update failed - ${res.error}`);
@@ -456,12 +453,8 @@ export const wizardManage = async (options: WizardManageOptions = {}): Promise<v
           continue;
         }
         if (res.success) {
-          const coConfiguredNotice =
-            res.coConfiguredAgents && res.coConfiguredAgents.length > 0
-              ? ` ${pc.yellow(`(co-configured: ${res.coConfiguredAgents.join(", ")})`)}`
-              : "";
           logger.success(
-            `${pc.cyan(res.agent)}: Successfully synced to ${pc.dim(res.path)}${coConfiguredNotice}`,
+            `${pc.cyan(res.agent)}: Successfully synced to ${pc.dim(res.path)}${formatCoHostedBadge("configured", res.coConfiguredAgents)}`,
           );
           targetGroup.agents.push(res.agent);
         } else {
