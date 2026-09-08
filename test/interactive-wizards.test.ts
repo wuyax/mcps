@@ -7,6 +7,7 @@ import {
   formatEnvText,
   formatHeadersText,
   groupInstalledServersByName,
+  linkedCheckbox,
   mainMenu,
   maskSecretHeader,
   maskSecretValue,
@@ -47,6 +48,7 @@ describe("Interactive modules export and API", () => {
     expect(typeof maskSecretHeader).toBe("function");
     expect(typeof promptScopeAndAgents).toBe("function");
     expect(typeof promptScope).toBe("function");
+    expect(typeof linkedCheckbox).toBe("function");
     expect(typeof parseEnvText).toBe("function");
     expect(typeof groupInstalledServersByName).toBe("function");
 

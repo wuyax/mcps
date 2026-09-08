@@ -1,4 +1,4 @@
-import { installMcpServerForAgent } from "./installer.ts";
+import { installMcpServerForAgents } from "./installer.ts";
 import { listInstalledMcpServers } from "./list.ts";
 import { resolveTargetAgents } from "./resolve-target-agents.ts";
 import type {
@@ -145,6 +145,12 @@ export const updateMcpServer = (options: UpdateMcpServerOptions): UpdateMcpServe
   });
 
   const incompatibleMap = new Map(incompatible.map((item) => [item.agent, item.reason]));
+  const compatibleAgents = allAgents.filter((a) => !incompatibleMap.has(a));
+  const installedResults = installMcpServerForAgents(options.serverName, serverConfig, compatibleAgents, {
+    global: isGlobal,
+    cwd,
+  });
+  const installedMap = new Map(installedResults.map((r) => [r.agent, r]));
 
   const results: McpInstallResultForAgent[] = allAgents.map((agentType) => {
     const incompatibleReason = incompatibleMap.get(agentType);
@@ -157,10 +163,7 @@ export const updateMcpServer = (options: UpdateMcpServerOptions): UpdateMcpServe
       };
     }
 
-    return installMcpServerForAgent(options.serverName, serverConfig, agentType, {
-      global: isGlobal,
-      cwd,
-    });
+    return installedMap.get(agentType)!;
   });
 
   return {

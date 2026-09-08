@@ -127,6 +127,7 @@ export interface McpInstallResultForAgent {
   agent: McpAgentType;
   success: boolean;
   path: string;
+  coConfiguredAgents?: McpAgentType[];
   error?: string;
 }
 
@@ -153,7 +154,15 @@ export interface RemoveMcpServerResult {
   agent: McpAgentType;
   path: string;
   removed: boolean;
+  coAffectedAgents?: McpAgentType[];
   error?: string;
+}
+
+export interface ConfigCluster {
+  configPath: string;
+  configKey: string;
+  targetAgents: McpAgentType[];
+  coHostedAgents: McpAgentType[];
 }
 
 export interface UpdateMcpServerOptions extends McpScopeOptions {

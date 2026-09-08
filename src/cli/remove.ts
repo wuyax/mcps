@@ -57,6 +57,11 @@ export const mcpRemoveCommand = new Command("remove")
           logger.success(
             `${pc.cyan(record.agent)} removed ${pc.bold(name)} ${pc.dim(record.path)}`,
           );
+          if (record.coAffectedAgents && record.coAffectedAgents.length > 0) {
+            logger.info(
+              `  ${pc.dim("Note:")} Also affects co-hosted agent(s): ${pc.yellow(record.coAffectedAgents.join(", "))}`,
+            );
+          }
         } else {
           logger.error(`${pc.cyan(record.agent)}: ${record.error ?? "not found"}`);
         }

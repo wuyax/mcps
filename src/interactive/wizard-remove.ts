@@ -1,12 +1,14 @@
-import { checkbox, confirm, select } from "@inquirer/prompts";
+import { confirm, select } from "@inquirer/prompts";
 import pc from "picocolors";
 
 import { getMcpAgentConfig } from "../agents.ts";
 import { listInstalledMcpServers } from "../list.ts";
 import { removeMcpServer } from "../remove.ts";
+import { getCoHostedAgents, sortAgentsWithClusters } from "../resolve-config-clusters.ts";
 import type { McpAgentType, McpScopeOptions } from "../types.ts";
 import { logger } from "../utils/logger.ts";
 
+import { linkedCheckbox } from "./prompts/linked-checkbox.ts";
 import { promptScope } from "./prompts/scope.ts";
 import { groupInstalledServersByName } from "./utils/group-installed-servers.ts";
 
@@ -46,23 +48,37 @@ export const wizardRemove = async (options: WizardRemoveOptions = {}): Promise<b
     });
   }
 
-  const installedAgents = serverMap.get(serverName)?.agents || [];
-  if (installedAgents.length === 0) {
+  const rawInstalledAgents = serverMap.get(serverName)?.agents || [];
+  if (rawInstalledAgents.length === 0) {
     logger.warn(`No agents found with [${serverName}] installed`);
     return false;
   }
 
+  const installedAgents = sortAgentsWithClusters(rawInstalledAgents, { global: isGlobal, cwd });
+
   let targetAgents = options.agents;
 
   if (!targetAgents || targetAgents.length === 0) {
-    targetAgents = await checkbox<McpAgentType>({
-      message: `Select agents to remove [${serverName}] from:`,
-      choices: installedAgents.map((agent) => ({
-        name: `${getMcpAgentConfig(agent)?.displayName ?? agent} (${agent})`,
+    const choices = installedAgents.map((agent) => {
+      const coHosted = getCoHostedAgents(agent, { global: isGlobal, cwd }).filter((co) =>
+        installedAgents.includes(co),
+      );
+      const sharedSuffix = coHosted.length > 0 ? pc.dim(` [shared: ${coHosted.join(", ")}]`) : "";
+      return {
+        name: `${getMcpAgentConfig(agent)?.displayName ?? agent} (${agent})${sharedSuffix}`,
         value: agent,
         checked: true,
-      })),
-      loop: false,
+        linkedValues: coHosted,
+        description:
+          coHosted.length > 0
+            ? `Linked with ${coHosted.map((a) => getMcpAgentConfig(a).displayName).join(", ")} (shared configuration)`
+            : undefined,
+      };
+    });
+
+    targetAgents = await linkedCheckbox<McpAgentType>({
+      message: `Select agents to remove [${serverName}] from:`,
+      choices,
       validate: (ans) => (ans.length === 0 ? "Please select at least one agent" : true),
     });
   } else {
@@ -94,7 +110,13 @@ export const wizardRemove = async (options: WizardRemoveOptions = {}): Promise<b
   let removedCount = 0;
   for (const res of results) {
     if (res.removed) {
-      logger.success(`${pc.cyan(res.agent)}: Successfully removed from ${pc.dim(res.path)}`);
+      const coAffectedNotice =
+        res.coAffectedAgents && res.coAffectedAgents.length > 0
+          ? ` ${pc.yellow(`(co-affected: ${res.coAffectedAgents.join(", ")})`)}`
+          : "";
+      logger.success(
+        `${pc.cyan(res.agent)}: Successfully removed from ${pc.dim(res.path)}${coAffectedNotice}`,
+      );
       removedCount++;
     } else if (res.error) {
       logger.error(`${pc.cyan(res.agent)}: Failed to remove - ${res.error}`);

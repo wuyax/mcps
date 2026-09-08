@@ -1,4 +1,3 @@
-import { checkbox, select } from "@inquirer/prompts";
 import pc from "picocolors";
 
 import {
@@ -6,10 +5,12 @@ import {
   getMcpAgentsSupportingProjectScope,
   getMcpAgentTypes,
 } from "../../agents.ts";
+import { getCoHostedAgents, sortAgentsWithClusters } from "../../resolve-config-clusters.ts";
 import { resolveTargetAgents } from "../../resolve-target-agents.ts";
 import type { McpAgentType, McpScopeOptions } from "../../types.ts";
 import { logger } from "../../utils/logger.ts";
 
+import { linkedCheckbox } from "./linked-checkbox.ts";
 import { promptScope } from "./scope.ts";
 
 export interface PromptScopeAndAgentsOptions extends McpScopeOptions {
@@ -44,9 +45,10 @@ export const promptScopeAndAgents = async (
   });
   const detected = resolution.detected;
 
-  const availableAgentTypes = isGlobal
+  const rawAvailable = isGlobal
     ? getMcpAgentTypes()
     : getMcpAgentsSupportingProjectScope();
+  const availableAgentTypes = sortAgentsWithClusters(rawAvailable, { global: isGlobal, cwd });
 
   if (detected.length > 0) {
     logger.info(
@@ -63,16 +65,25 @@ export const promptScopeAndAgents = async (
   const choices = availableAgentTypes.map((agentType) => {
     const config = getMcpAgentConfig(agentType);
     const isDetected = detected.includes(agentType);
-    const label = `${config.displayName} ${pc.dim(`(${agentType})`)}${isDetected ? pc.green(" [detected]") : ""}`;
+    const coHosted = getCoHostedAgents(agentType, { global: isGlobal, cwd }).filter((co) =>
+      availableAgentTypes.includes(co),
+    );
+    const sharedSuffix = coHosted.length > 0 ? pc.dim(` [shared: ${coHosted.join(", ")}]`) : "";
+    const label = `${config.displayName} ${pc.dim(`(${agentType})`)}${isDetected ? pc.green(" [detected]") : ""}${sharedSuffix}`;
 
     return {
       name: label,
       value: agentType,
       checked: defaultChecked.includes(agentType),
+      linkedValues: coHosted,
+      description:
+        coHosted.length > 0
+          ? `Linked with ${coHosted.map((a) => getMcpAgentConfig(a).displayName).join(", ")} (shared configuration)`
+          : undefined,
     };
   });
 
-  const selectedAgents = await checkbox<McpAgentType>({
+  const selectedAgents = await linkedCheckbox<McpAgentType>({
     message: "Select target agents (Space to select, Enter to confirm):",
     choices,
     validate: (chosen) => {

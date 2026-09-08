@@ -50,6 +50,12 @@ export {
   installMcpServerForAgents,
 } from "./installer.ts";
 export { resolveMcpConfigTarget } from "./resolve-config-target.ts";
+export {
+  getCandidateAgentsForScope,
+  getCoHostedAgents,
+  resolveConfigClusters,
+  sortAgentsWithClusters,
+} from "./resolve-config-clusters.ts";
 export { listInstalledMcpServers, listInstalledMcpServers as list } from "./list.ts";
 export {
   extractPackageName,
@@ -112,6 +118,11 @@ export {
 } from "./interactive/prompts/args.ts";
 export { promptScopeAndAgents } from "./interactive/prompts/agents.ts";
 export { promptScope } from "./interactive/prompts/scope.ts";
+export {
+  linkedCheckbox,
+  type LinkedCheckboxPrompt,
+  type LinkedChoice,
+} from "./interactive/prompts/linked-checkbox.ts";
 export { mcpManageCommand } from "./cli/manage.ts";
 export {
   groupInstalledServersByName,
@@ -126,6 +137,7 @@ export {
 } from "./transforms/index.ts";
 
 export type {
+  ConfigCluster,
   InstallMcpServerOptions,
   InstallMcpServerResult,
   ListedMcpServer,
