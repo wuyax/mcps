@@ -43,6 +43,26 @@ describe("Co-affected and deduplicated removal", () => {
     expect(content.mcpServers.testServer).toBeUndefined();
   });
 
+  it("does not report coAffectedAgents when server was not present (removed is false)", () => {
+    const agentsDir = join(tempDir, ".agents");
+    mkdirSync(agentsDir, { recursive: true });
+    const configPath = join(agentsDir, "mcp_config.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        mcpServers: {},
+      }),
+    );
+
+    const result = removeMcpServerFromAgent("nonExistentServer", "antigravity", {
+      global: false,
+      cwd: tempDir,
+    });
+
+    expect(result.removed).toBe(false);
+    expect(result.coAffectedAgents).toBeUndefined();
+  });
+
   it("deduplicates physical removal when all co-hosted agents are requested", () => {
     const agentsDir = join(tempDir, ".agents");
     mkdirSync(agentsDir, { recursive: true });

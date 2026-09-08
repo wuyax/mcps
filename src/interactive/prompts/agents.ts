@@ -10,6 +10,7 @@ import { resolveTargetAgents } from "../../resolve-target-agents.ts";
 import type { McpAgentType, McpScopeOptions } from "../../types.ts";
 import { logger } from "../../utils/logger.ts";
 
+import { buildLinkedAgentChoices } from "../utils/build-linked-agent-choices.ts";
 import { linkedCheckbox } from "./linked-checkbox.ts";
 import { promptScope } from "./scope.ts";
 
@@ -58,29 +59,26 @@ export const promptScopeAndAgents = async (
     logger.warn(`No active ${isGlobal ? "global" : "project"} agents detected`);
   }
 
-  const defaultChecked = options.defaultAgents && options.defaultAgents.length > 0
+  const rawDefaultChecked = options.defaultAgents && options.defaultAgents.length > 0
     ? options.defaultAgents
     : detected;
 
-  const choices = availableAgentTypes.map((agentType) => {
-    const config = getMcpAgentConfig(agentType);
-    const isDetected = detected.includes(agentType);
-    const coHosted = getCoHostedAgents(agentType, { global: isGlobal, cwd }).filter((co) =>
-      availableAgentTypes.includes(co),
-    );
-    const sharedSuffix = coHosted.length > 0 ? pc.dim(` [shared: ${coHosted.join(", ")}]`) : "";
-    const label = `${config.displayName} ${pc.dim(`(${agentType})`)}${isDetected ? pc.green(" [detected]") : ""}${sharedSuffix}`;
+  // Align initial checked state: if an agent is selected, its co-hosted agents must also be initially selected
+  const alignedChecked = new Set<McpAgentType>(rawDefaultChecked);
+  for (const agent of rawDefaultChecked) {
+    const coHosted = getCoHostedAgents(agent, { global: isGlobal, cwd });
+    for (const co of coHosted) {
+      if (availableAgentTypes.includes(co)) {
+        alignedChecked.add(co);
+      }
+    }
+  }
 
-    return {
-      name: label,
-      value: agentType,
-      checked: defaultChecked.includes(agentType),
-      linkedValues: coHosted,
-      description:
-        coHosted.length > 0
-          ? `Linked with ${coHosted.map((a) => getMcpAgentConfig(a).displayName).join(", ")} (shared configuration)`
-          : undefined,
-    };
+  const choices = buildLinkedAgentChoices({
+    agents: availableAgentTypes,
+    checkedAgents: Array.from(alignedChecked),
+    detectedAgents: detected,
+    scopeOptions: { global: isGlobal, cwd },
   });
 
   const selectedAgents = await linkedCheckbox<McpAgentType>({

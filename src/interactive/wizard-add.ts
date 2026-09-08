@@ -184,7 +184,13 @@ export const wizardAdd = async (initial: WizardAddOptions = {}): Promise<boolean
   let allSuccess = true;
   for (const record of result.results) {
     if (record.success) {
-      logger.success(`${pc.cyan(record.agent)}: Successfully written to ${pc.dim(record.path)}`);
+      const coConfiguredNotice =
+        record.coConfiguredAgents && record.coConfiguredAgents.length > 0
+          ? ` ${pc.yellow(`(co-configured: ${record.coConfiguredAgents.join(", ")})`)}`
+          : "";
+      logger.success(
+        `${pc.cyan(record.agent)}: Successfully written to ${pc.dim(record.path)}${coConfiguredNotice}`,
+      );
     } else {
       allSuccess = false;
       logger.error(`${pc.cyan(record.agent)}: Failed to write - ${record.error}`);

@@ -129,6 +129,10 @@ export {
   normalizeServerConfig,
   type GroupedInstalledServer,
 } from "./interactive/utils/group-installed-servers.ts";
+export {
+  buildLinkedAgentChoices,
+  type BuildLinkedAgentChoicesOptions,
+} from "./interactive/utils/build-linked-agent-choices.ts";
 
 export {
   createAgentTransform,

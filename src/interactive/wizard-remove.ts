@@ -10,6 +10,7 @@ import { logger } from "../utils/logger.ts";
 
 import { linkedCheckbox } from "./prompts/linked-checkbox.ts";
 import { promptScope } from "./prompts/scope.ts";
+import { buildLinkedAgentChoices } from "./utils/build-linked-agent-choices.ts";
 import { groupInstalledServersByName } from "./utils/group-installed-servers.ts";
 
 export interface WizardRemoveOptions extends McpScopeOptions {
@@ -59,21 +60,10 @@ export const wizardRemove = async (options: WizardRemoveOptions = {}): Promise<b
   let targetAgents = options.agents;
 
   if (!targetAgents || targetAgents.length === 0) {
-    const choices = installedAgents.map((agent) => {
-      const coHosted = getCoHostedAgents(agent, { global: isGlobal, cwd }).filter((co) =>
-        installedAgents.includes(co),
-      );
-      const sharedSuffix = coHosted.length > 0 ? pc.dim(` [shared: ${coHosted.join(", ")}]`) : "";
-      return {
-        name: `${getMcpAgentConfig(agent)?.displayName ?? agent} (${agent})${sharedSuffix}`,
-        value: agent,
-        checked: true,
-        linkedValues: coHosted,
-        description:
-          coHosted.length > 0
-            ? `Linked with ${coHosted.map((a) => getMcpAgentConfig(a).displayName).join(", ")} (shared configuration)`
-            : undefined,
-      };
+    const choices = buildLinkedAgentChoices({
+      agents: installedAgents,
+      checkedAgents: installedAgents,
+      scopeOptions: { global: isGlobal, cwd },
     });
 
     targetAgents = await linkedCheckbox<McpAgentType>({

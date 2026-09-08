@@ -39,7 +39,6 @@ export const installMcpServerForAgent = (
       agent: agentType,
       success: false,
       path: target.configPath,
-      coConfiguredAgents: coHosted.length > 0 ? coHosted : undefined,
       error: toErrorMessage(error),
     };
   }

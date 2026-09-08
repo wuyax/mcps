@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseEnvText } from "../src/interactive/prompts/env.ts";
+import { buildLinkedAgentChoices } from "../src/interactive/utils/build-linked-agent-choices.ts";
 
 describe("parseEnvText", () => {
   it("should parse standard KEY=VALUE pairs", () => {
@@ -222,6 +223,37 @@ describe("parseKeyValueList", () => {
   it("should return empty object for undefined or empty list", () => {
     expect(parseKeyValueList(undefined, "=")).toEqual({});
     expect(parseKeyValueList([], "=")).toEqual({});
+  });
+});
+
+describe("buildLinkedAgentChoices", () => {
+  it("builds choices with linkedValues and shared description for co-hosted agents", () => {
+    const choices = buildLinkedAgentChoices({
+      agents: ["antigravity", "antigravity-cli", "cursor"],
+      checkedAgents: ["antigravity"],
+      detectedAgents: ["antigravity"],
+      scopeOptions: { global: true },
+    });
+
+    expect(choices).toHaveLength(3);
+
+    const agyChoice = choices.find((c) => c.value === "antigravity");
+    const cliChoice = choices.find((c) => c.value === "antigravity-cli");
+    const cursorChoice = choices.find((c) => c.value === "cursor");
+
+    expect(agyChoice?.checked).toBe(true);
+    expect(agyChoice?.linkedValues).toContain("antigravity-cli");
+    expect(agyChoice?.name).toContain("[detected]");
+    expect(agyChoice?.name).toContain("[shared: antigravity-cli]");
+    expect(agyChoice?.description).toContain("Antigravity CLI");
+
+    expect(cliChoice?.checked).toBe(false);
+    expect(cliChoice?.linkedValues).toContain("antigravity");
+    expect(cliChoice?.name).toContain("[shared: antigravity]");
+
+    expect(cursorChoice?.checked).toBe(false);
+    expect(cursorChoice?.linkedValues).toEqual([]);
+    expect(cursorChoice?.description).toBeUndefined();
   });
 });
 

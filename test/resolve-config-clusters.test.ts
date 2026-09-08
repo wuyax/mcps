@@ -6,6 +6,7 @@ import {
   resolveConfigClusters,
   sortAgentsWithClusters,
 } from "../src/resolve-config-clusters.ts";
+import type { McpAgentType } from "../src/types.ts";
 
 describe("resolve-config-clusters", () => {
   describe("getCandidateAgentsForScope", () => {
@@ -82,11 +83,11 @@ describe("resolve-config-clusters", () => {
 
   describe("sortAgentsWithClusters", () => {
     it("places co-hosted agents adjacent to each other", () => {
-      const input = ["cursor", "antigravity", "vscode", "antigravity-cli"];
-      const sorted = sortAgentsWithClusters(input as any, { global: true });
+      const input: McpAgentType[] = ["cursor", "antigravity", "vscode", "antigravity-cli"];
+      const sorted = sortAgentsWithClusters(input, { global: true });
 
-      const idx1 = sorted.indexOf("antigravity" as any);
-      const idx2 = sorted.indexOf("antigravity-cli" as any);
+      const idx1 = sorted.indexOf("antigravity");
+      const idx2 = sorted.indexOf("antigravity-cli");
       expect(Math.abs(idx1 - idx2)).toBe(1);
     });
   });

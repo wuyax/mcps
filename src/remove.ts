@@ -20,14 +20,13 @@ export const removeMcpServerFromAgent = (
       agent: agentType,
       path: target.configPath,
       removed,
-      coAffectedAgents: coHosted.length > 0 ? coHosted : undefined,
+      coAffectedAgents: removed && coHosted.length > 0 ? coHosted : undefined,
     };
   } catch (error) {
     return {
       agent: agentType,
       path: target.configPath,
       removed: false,
-      coAffectedAgents: coHosted.length > 0 ? coHosted : undefined,
       error: toErrorMessage(error),
     };
   }
