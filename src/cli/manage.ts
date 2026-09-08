@@ -1,7 +1,10 @@
 import { Command } from "commander";
 import pc from "picocolors";
 
-import { groupInstalledServersByName } from "../interactive/utils/group-installed-servers.ts";
+import {
+  groupInstalledServersByName,
+  type GroupedInstalledServer,
+} from "../interactive/utils/group-installed-servers.ts";
 import { wizardManage } from "../interactive/wizard-manage.ts";
 import { listInstalledMcpServers } from "../list.ts";
 import type {
@@ -30,6 +33,24 @@ export interface McpManageCliOptions {
   url?: string;
   yes?: boolean;
 }
+
+const findTargetServerGroup = (
+  serverName: string,
+  isGlobal: boolean,
+  cwd: string,
+): GroupedInstalledServer | undefined => {
+  const installed = listInstalledMcpServers({ global: isGlobal, cwd });
+  const grouped = groupInstalledServersByName(installed);
+  const targetGroup = grouped.get(serverName);
+  if (!targetGroup) {
+    logger.error(
+      `MCP server "${serverName}" is not configured in ${isGlobal ? "global" : "project"} scope.`,
+    );
+    process.exitCode = 1;
+    return undefined;
+  }
+  return targetGroup;
+};
 
 export const mcpManageCommand = new Command("manage")
   .description("Inspect, modify, and sync installed MCP servers across coding agents")
@@ -77,38 +98,42 @@ export const mcpManageCommand = new Command("manage")
           return;
         }
 
-        const installed = listInstalledMcpServers({ global: isGlobal, cwd });
-        const grouped = groupInstalledServersByName(installed);
-        const targetGroup = grouped.get(serverName);
-
+        const targetGroup = findTargetServerGroup(serverName, isGlobal, cwd);
         if (!targetGroup) {
-          logger.error(
-            `MCP server "${serverName}" is not configured in ${isGlobal ? "global" : "project"} scope.`,
-          );
-          process.exitCode = 1;
           return;
         }
 
         const isCurrentRemote = Boolean(targetGroup.config.url && targetGroup.config.url.length > 0);
-        if (isCurrentRemote && options.command === undefined) {
+        const willBeRemote =
+          options.url !== undefined ? true : options.command !== undefined ? false : isCurrentRemote;
+
+        if (willBeRemote) {
           const ignoredStdioFlags: string[] = [];
           if (options.env !== undefined) ignoredStdioFlags.push("--env");
           if (options.clearEnv) ignoredStdioFlags.push("--clear-env");
           if (options.args !== undefined) ignoredStdioFlags.push("--args");
           if (options.clearArgs) ignoredStdioFlags.push("--clear-args");
           if (ignoredStdioFlags.length > 0) {
+            const hint =
+              options.url !== undefined
+                ? "When configuring a remote server, stdio flags are ignored."
+                : "Use --command to switch to stdio mode.";
             logger.warn(
-              `Server "${serverName}" is a remote server. The following stdio flags will be ignored: ${ignoredStdioFlags.join(", ")}. Use --command to switch to stdio mode.`,
+              `Server "${serverName}" is a remote server. The following stdio flags will be ignored: ${ignoredStdioFlags.join(", ")}. ${hint}`,
             );
           }
-        } else if (!isCurrentRemote && options.url === undefined) {
+        } else {
           const ignoredRemoteFlags: string[] = [];
           if (options.header !== undefined) ignoredRemoteFlags.push("--header");
           if (options.clearHeaders) ignoredRemoteFlags.push("--clear-headers");
           if (options.transport !== undefined) ignoredRemoteFlags.push("--transport");
           if (ignoredRemoteFlags.length > 0) {
+            const hint =
+              options.command !== undefined
+                ? "When configuring a stdio server, remote flags are ignored."
+                : "Use --url to switch to remote mode.";
             logger.warn(
-              `Server "${serverName}" is a stdio server. The following remote flags will be ignored: ${ignoredRemoteFlags.join(", ")}. Use --url to switch to remote mode.`,
+              `Server "${serverName}" is a stdio server. The following remote flags will be ignored: ${ignoredRemoteFlags.join(", ")}. ${hint}`,
             );
           }
         }
@@ -147,9 +172,16 @@ export const mcpManageCommand = new Command("manage")
           incomingDelta.headers = { ...baseHeaders, ...parsedHeaders };
         }
 
-        const targetAgents: McpAgentType[] | undefined = options.agent
-          ? (parseMcpAgentList(options.agent) ?? targetGroup.agents)
-          : targetGroup.agents;
+        let targetAgents: McpAgentType[] = targetGroup.agents;
+        if (options.agent) {
+          const parsed = parseMcpAgentList(options.agent);
+          if (!parsed || parsed.length === 0) {
+            logger.error(`No valid agents recognized from: "${options.agent.join(", ")}".`);
+            process.exitCode = 1;
+            return;
+          }
+          targetAgents = parsed;
+        }
 
         const updateResult = updateMcpServer({
           serverName,
@@ -209,15 +241,8 @@ export const mcpManageCommand = new Command("manage")
           return;
         }
 
-        const installed = listInstalledMcpServers({ global: isGlobal, cwd });
-        const grouped = groupInstalledServersByName(installed);
-        const targetGroup = grouped.get(serverName);
-
+        const targetGroup = findTargetServerGroup(serverName, isGlobal, cwd);
         if (!targetGroup) {
-          logger.error(
-            `MCP server "${serverName}" is not configured in ${isGlobal ? "global" : "project"} scope.`,
-          );
-          process.exitCode = 1;
           return;
         }
 
@@ -248,4 +273,3 @@ export const mcpManageCommand = new Command("manage")
       process.exitCode = 1;
     }
   });
-

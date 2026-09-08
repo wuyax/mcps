@@ -183,7 +183,7 @@ describe("Interactive modules export and API", () => {
           headers: { Authorization: "Bearer secret" },
         },
         agents: ["cursor"],
-        isGlobal: false,
+        global: false,
       }),
     ).not.toThrow();
   });

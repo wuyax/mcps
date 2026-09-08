@@ -8,10 +8,6 @@ export interface DisplayServerDetailsOptions extends McpScopeOptions {
   serverName: string;
   config: McpServerConfig;
   agents?: McpAgentType[];
-  /**
-   * @deprecated Use `global` from McpScopeOptions instead.
-   */
-  isGlobal?: boolean;
   hasDivergence?: boolean;
   titlePrefix?: string;
 }
@@ -24,8 +20,7 @@ export const displayServerDetails = ({
   config,
   agents,
   hasDivergence,
-  global,
-  isGlobal = global,
+  global: isGlobal,
   titlePrefix = "MCP Server Details",
 }: DisplayServerDetailsOptions): void => {
   console.log("\n" + pc.cyan(pc.bold(`${titlePrefix}: [${serverName}]`)));

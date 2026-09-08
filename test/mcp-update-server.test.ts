@@ -475,4 +475,105 @@ describe("CLI manage clear flags", () => {
       process.chdir(origCwd);
     }
   });
+
+  it("aborts with exit code 1 when unrecognized agent is passed via -a", async () => {
+    installMcpServer({
+      source: "node srv.js",
+      name: "target-agent-srv",
+      agents: ["cursor"],
+      cwd,
+    });
+
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    const origCwd = process.cwd();
+    const origExitCode = process.exitCode;
+    try {
+      process.chdir(cwd);
+      process.exitCode = undefined;
+      await mcpManageCommand.parseAsync([
+        "node",
+        "test",
+        "target-agent-srv",
+        "--env",
+        "KEY=VAL",
+        "-a",
+        "non-existent-agent",
+      ]);
+
+      expect(process.exitCode).toBe(1);
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Unknown MCP agent "non-existent-agent"'),
+      );
+    } finally {
+      errorSpy.mockRestore();
+      process.exitCode = origExitCode;
+      process.chdir(origCwd);
+    }
+  });
+
+  it("warns when passing stdio flags while switching to remote via --url", async () => {
+    installMcpServer({
+      source: "node srv.js",
+      name: "switch-warn-srv",
+      agents: ["cursor"],
+      cwd,
+    });
+
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    const origCwd = process.cwd();
+    try {
+      process.chdir(cwd);
+      await mcpManageCommand.parseAsync([
+        "node",
+        "test",
+        "switch-warn-srv",
+        "--url",
+        "https://example.com/mcp",
+        "--env",
+        "FOO=BAR",
+        "-a",
+        "cursor",
+      ]);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Server "switch-warn-srv" is a remote server. The following stdio flags will be ignored: --env'),
+      );
+    } finally {
+      warnSpy.mockRestore();
+      process.chdir(origCwd);
+    }
+  });
+
+  it("warns when passing remote flags while switching to stdio via --command", async () => {
+    installMcpServer({
+      source: "https://example.com/sse",
+      name: "switch-warn-stdio-srv",
+      agents: ["cursor"],
+      cwd,
+    });
+
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    const origCwd = process.cwd();
+    try {
+      process.chdir(cwd);
+      await mcpManageCommand.parseAsync([
+        "node",
+        "test",
+        "switch-warn-stdio-srv",
+        "--command",
+        "node",
+        "--header",
+        "Authorization: Bearer token",
+        "-a",
+        "cursor",
+      ]);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Server "switch-warn-stdio-srv" is a stdio server. The following remote flags will be ignored: --header'),
+      );
+    } finally {
+      warnSpy.mockRestore();
+      process.chdir(origCwd);
+    }
+  });
 });
