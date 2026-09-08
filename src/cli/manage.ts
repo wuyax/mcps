@@ -9,6 +9,7 @@ import { wizardManage } from "../interactive/wizard-manage.ts";
 import { listInstalledMcpServers } from "../list.ts";
 import type {
   McpAgentType,
+  McpScopeOptions,
   McpServerConfig,
 } from "../types.ts";
 import { updateMcpServer } from "../update-mcp-server.ts";
@@ -34,17 +35,16 @@ export interface McpManageCliOptions {
   yes?: boolean;
 }
 
-const findTargetServerGroup = (
+const requireTargetServerGroup = (
   serverName: string,
-  isGlobal: boolean,
-  cwd: string,
+  scope: McpScopeOptions,
 ): GroupedInstalledServer | undefined => {
-  const installed = listInstalledMcpServers({ global: isGlobal, cwd });
+  const installed = listInstalledMcpServers(scope);
   const grouped = groupInstalledServersByName(installed);
   const targetGroup = grouped.get(serverName);
   if (!targetGroup) {
     logger.error(
-      `MCP server "${serverName}" is not configured in ${isGlobal ? "global" : "project"} scope.`,
+      `MCP server "${serverName}" is not configured in ${scope.global ? "global" : "project"} scope.`,
     );
     process.exitCode = 1;
     return undefined;
@@ -98,7 +98,7 @@ export const mcpManageCommand = new Command("manage")
           return;
         }
 
-        const targetGroup = findTargetServerGroup(serverName, isGlobal, cwd);
+        const targetGroup = requireTargetServerGroup(serverName, { global: isGlobal, cwd });
         if (!targetGroup) {
           return;
         }
@@ -173,7 +173,9 @@ export const mcpManageCommand = new Command("manage")
         }
 
         let targetAgents: McpAgentType[] = targetGroup.agents;
-        if (options.agent) {
+        if (options.agent !== undefined) {
+          // parseMcpAgentList throws on invalid agent names (handled by outer catch).
+          // If options.agent is an empty list, it returns undefined which we explicitly block.
           const parsed = parseMcpAgentList(options.agent);
           if (!parsed || parsed.length === 0) {
             logger.error(`No valid agents recognized from: "${options.agent.join(", ")}".`);
@@ -241,7 +243,7 @@ export const mcpManageCommand = new Command("manage")
           return;
         }
 
-        const targetGroup = findTargetServerGroup(serverName, isGlobal, cwd);
+        const targetGroup = requireTargetServerGroup(serverName, { global: isGlobal, cwd });
         if (!targetGroup) {
           return;
         }
