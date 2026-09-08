@@ -251,10 +251,6 @@ export const linkedCheckbox: LinkedCheckboxPrompt = createPrompt(
         setItems((prevItems) =>
           prevItems.map((item) => (isSelectable(item) ? { ...item, checked: hasUnchecked } : item)),
         );
-      } else if (key.name === "i") {
-        setItems((prevItems) =>
-          prevItems.map((item) => (isSelectable(item) ? { ...item, checked: !item.checked } : item)),
-        );
       } else if (isNumberKey(key)) {
         const selectedIndex = Number(key.name) - 1;
         let selectableIndex = -1;
@@ -310,7 +306,6 @@ export const linkedCheckbox: LinkedCheckboxPrompt = createPrompt(
       ["up/down", "navigate"],
       ["space", "toggle"],
       ["a", "all"],
-      ["i", "invert"],
       ["enter", "submit"],
     ]);
 

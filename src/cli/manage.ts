@@ -221,6 +221,11 @@ export const mcpManageCommand = new Command("manage")
         for (const res of attemptedResults) {
           if (res.success) {
             logger.success(`${pc.cyan(res.agent)}: Successfully updated in ${pc.dim(res.path)}`);
+            if (res.coConfiguredAgents && res.coConfiguredAgents.length > 0) {
+              logger.info(
+                `  ${pc.dim("Note:")} Also configured for co-hosted agent(s): ${pc.yellow(res.coConfiguredAgents.join(", "))}`,
+              );
+            }
           } else {
             allSuccess = false;
             logger.error(`${pc.cyan(res.agent)}: Update failed - ${res.error}`);

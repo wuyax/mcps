@@ -280,8 +280,12 @@ const handleEditServerConfig = async (options: EditServerConfigOptions): Promise
         if (res.success) {
           updatedAny = true;
           succeededAgents.push(res.agent);
+          const coConfiguredNotice =
+            res.coConfiguredAgents && res.coConfiguredAgents.length > 0
+              ? ` ${pc.yellow(`(co-configured: ${res.coConfiguredAgents.join(", ")})`)}`
+              : "";
           logger.success(
-            `${pc.cyan(res.agent)}: Successfully updated configuration in ${pc.dim(res.path)}`,
+            `${pc.cyan(res.agent)}: Successfully updated configuration in ${pc.dim(res.path)}${coConfiguredNotice}`,
           );
         } else {
           logger.error(`${pc.cyan(res.agent)}: Update failed - ${res.error}`);
@@ -452,7 +456,13 @@ export const wizardManage = async (options: WizardManageOptions = {}): Promise<v
           continue;
         }
         if (res.success) {
-          logger.success(`${pc.cyan(res.agent)}: Successfully synced to ${pc.dim(res.path)}`);
+          const coConfiguredNotice =
+            res.coConfiguredAgents && res.coConfiguredAgents.length > 0
+              ? ` ${pc.yellow(`(co-configured: ${res.coConfiguredAgents.join(", ")})`)}`
+              : "";
+          logger.success(
+            `${pc.cyan(res.agent)}: Successfully synced to ${pc.dim(res.path)}${coConfiguredNotice}`,
+          );
           targetGroup.agents.push(res.agent);
         } else {
           logger.error(`${pc.cyan(res.agent)}: Sync failed - ${res.error}`);

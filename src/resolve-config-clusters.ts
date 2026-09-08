@@ -50,14 +50,19 @@ export const resolveConfigClusters = (
   agentTypes: McpAgentType[],
   options: McpScopeOptions = {},
 ): ConfigCluster[] => {
-  const clustersByPath = new Map<string, ConfigCluster>();
+  const clustersByPath = new Map<string, Map<string, ConfigCluster>>();
 
   for (const agentType of agentTypes) {
     const agentConfig = getMcpAgentConfig(agentType);
     const target = resolveMcpConfigTarget(agentConfig, options);
-    const clusterKey = `${target.configPath}::${target.configKey}`;
 
-    let cluster = clustersByPath.get(clusterKey);
+    let keyMap = clustersByPath.get(target.configPath);
+    if (!keyMap) {
+      keyMap = new Map();
+      clustersByPath.set(target.configPath, keyMap);
+    }
+
+    let cluster = keyMap.get(target.configKey);
     if (!cluster) {
       const allCoHosted = getCoHostedAgents(agentType, options);
       cluster = {
@@ -66,7 +71,7 @@ export const resolveConfigClusters = (
         targetAgents: [],
         coHostedAgents: allCoHosted,
       };
-      clustersByPath.set(clusterKey, cluster);
+      keyMap.set(target.configKey, cluster);
     }
 
     if (!cluster.targetAgents.includes(agentType)) {
@@ -74,14 +79,17 @@ export const resolveConfigClusters = (
     }
   }
 
-  // Refine coHostedAgents so they only contain agents NOT in targetAgents
-  for (const cluster of clustersByPath.values()) {
-    cluster.coHostedAgents = cluster.coHostedAgents.filter(
-      (co) => !cluster.targetAgents.includes(co),
-    );
+  const clusters: ConfigCluster[] = [];
+  for (const keyMap of clustersByPath.values()) {
+    for (const cluster of keyMap.values()) {
+      cluster.coHostedAgents = cluster.coHostedAgents.filter(
+        (co) => !cluster.targetAgents.includes(co),
+      );
+      clusters.push(cluster);
+    }
   }
 
-  return Array.from(clustersByPath.values());
+  return clusters;
 };
 
 /**
