@@ -12,8 +12,8 @@ Cross-platform Model Context Protocol (MCP) server manager, synchronizer, and co
 - **Multi-Format Storage**: Native read and write engines for JSON, JSONC (preserving existing comments and AST structure via `jsonc-parser`), YAML, and TOML.
 - **Declarative Dialect Transforms**: Intelligent transformation layer adapting standard `McpServerConfig` models into agent-specific field shapes (`command` array vs binary string, `cmd` vs `command`, `envs` vs `env` vs `environment`, `uri` vs `url`, transport indicators, timeouts, and metadata flags).
 - **Intelligent Source Resolution**: Accepts npm package specs, remote HTTP/SSE endpoints, local CLI commands, and Docker containers. Automatically strips npm scopes, package affixes, script extensions, and URL host clutter to infer clean server names.
-- **Cross-Agent Synchronization**: Inspect installed MCP servers across project and global scopes, view parsed details, and sync/clone configurations to other agents with automatic dialect and format translation.
-- **Dual Mode (Interactive TTY + Headless CLI)**: Rich interactive terminal wizards with multiline `.env`/header pasting, `$EDITOR` launching, and password masking for secrets, combined with robust CLI flags and standard exit codes for CI/CD and autonomous agents.
+- **Cross-Agent Synchronization & In-Place Editing**: Inspect installed MCP servers across project and global scopes, view parsed details with secret masking, edit configurations in-place with protocol switching (stdio <-> remote), and sync/clone configurations to other agents with automatic dialect and format translation.
+- **Dual Mode (Interactive TTY + Headless CLI)**: Rich interactive terminal wizards with multiline `.env`/header pasting, `$EDITOR` launching, and password masking for secrets, combined with robust CLI commands (`add`, `manage`, `list`, `remove`) and standard exit codes for CI/CD and autonomous agents.
 - **Pluggable Architecture**: Decoupled deep modules including `AgentConfigStore` (supporting filesystem and in-memory test adapters), `resolveTargetAgents` (capability and transport filtering), and declarative transform dialects.
 
 ---
@@ -73,6 +73,18 @@ List installed MCP servers in the current project:
 mcps list
 ```
 
+Inspect an installed MCP server's configuration details:
+
+```bash
+mcps manage server-filesystem
+```
+
+Update command arguments or environment variables non-interactively:
+
+```bash
+mcps manage server-filesystem --args "/workspace" "/data" -y
+```
+
 Remove an MCP server from all agents globally without prompting:
 
 ```bash
@@ -115,16 +127,18 @@ When launched with no arguments, the main menu offers:
    - Supports multiline terminal pasting (`Key: Value` or `Key=Value`), `$EDITOR` entry, or step-by-step entry with secret masking for authorization tokens.
 8. **Configuration Preview & Confirmation**: Displays normalized parameters before writing to disk.
 
-### Manage & Sync Wizard (`mcps` -> Manage)
+### Manage & Sync Wizard (`mcps` -> Manage, or `mcps manage [server-name]`)
 
-1. Prompts for scope (**Project** or **Global**).
-2. Lists all configured MCP servers grouped by server name along with the agents that currently configure them.
-3. Inspects selected server details: transport type, URL or command, arguments, environment variables, and headers (with secret masking).
+1. Prompts for scope (**Project** or **Global**), or accepts scope flag (`-g, --global`).
+2. Lists all configured MCP servers grouped by server name along with configuring agents. Directly passing `[server-name]` skips the server selection step.
+3. Inspects server details: transport type, URL or command, arguments, environment variables, and headers (with password and token masking). If configurations diverge across agents, displays a divergence warning.
 4. Allows triggering **Edit server configuration**:
+   - **Switch Server Type**: Convert a local command (stdio) to a remote endpoint (HTTP/SSE) or vice versa in-place with interactive input prompts.
    - **Environment Variables (`env`)**: Inspect masked secrets, modify or add variables one-by-one, open in `$EDITOR` with pre-filled `.env` format, paste multiline `.env` definitions (merge or replace), or delete variables.
    - **Command Arguments (`args`)**: Edit arguments in-place with existing arguments pre-filled.
    - **Command (`command`)**: Update executable name or binary path.
-   - **Remote Endpoints (`url`, `type`, `headers`)**: Modify remote URLs, toggle HTTP/SSE transport, and manage HTTP headers.
+   - **Remote Endpoints (`url`, `type`, `headers`)**: Modify remote URLs, toggle between HTTP and SSE transport, and manage HTTP headers.
+   - **Reset & Discard**: Reset working changes back to the original values or cancel to discard edits without saving.
    - Saves and persists updated configurations to target agent files using native formats and schema dialects.
 5. Allows triggering **Sync / clone to other agents**:
    - Identifies candidate agents that do not currently have the server configured.
@@ -235,6 +249,77 @@ mcps list -g -a cursor vscode
 
 # Output all project-configured servers in JSON format
 mcps list --json
+```
+
+---
+
+### `mcps manage [server-name]`
+
+Inspects, modifies in-place, or synchronizes installed MCP server configurations across coding agents.
+
+```bash
+mcps manage [server-name] [options]
+```
+
+#### Arguments
+
+- `[server-name]`: Name of the MCP server to inspect or manage.
+  - In an interactive terminal (TTY): If omitted, launches the interactive Manage & Sync Wizard. If provided without modification flags, displays server details and opens the interactive edit/sync menu.
+  - In non-interactive mode (`--yes` or non-TTY): Required when passing modification flags. When passed without modification flags, prints server configuration details (with masked secrets) and exits.
+
+#### Options
+
+- `-a, --agent <agents...>`: Target specific agents for inspection or update. When omitted during updates, defaults to all agents currently configuring the server.
+- `-g, --global`: Target global user-level configurations instead of current project directory.
+- `-t, --transport <type>`: Transport type for remote servers (`http` or `sse`).
+- `--header <header...>`: HTTP header formatted as `Key: Value`. Repeatable.
+- `--clear-headers`: Clear all HTTP headers for remote servers.
+- `--env <env...>`: Environment variable formatted as `KEY=VALUE`. Repeatable.
+- `--clear-env`: Clear all environment variables for stdio servers.
+- `--args <args...>`: CLI arguments for stdio/package servers.
+- `--clear-args`: Clear all arguments for stdio/package servers.
+- `--command <command>`: Executable command for stdio servers.
+- `--url <url>`: Remote endpoint URL.
+- `-y, --yes`: Non-interactive mode; skips confirmation and interactive prompts.
+
+#### Protocol Switching & Sanitization
+
+`mcps manage` automatically handles protocol transitions and prevents configuration pollution:
+- **Mutual Exclusion**: `--url` (remote) and `--command` (stdio) cannot be specified simultaneously.
+- **Switching to Remote**: Supplying `--url` strips existing stdio fields (`command`, `args`, `env`) and applies remote parameters (`url`, `type`, `headers`). Target agents that only support stdio (e.g. Claude Desktop) are skipped with diagnostic warnings.
+- **Switching to Stdio**: Supplying `--command` strips existing remote fields (`url`, `type`, `headers`) and applies stdio parameters (`command`, `args`, `env`).
+- **Clear Flags**: `--clear-env`, `--clear-args`, and `--clear-headers` strip their respective configuration fields. They can also be paired with replacement values (for instance, `--clear-env --env "NEW_VAR=1"` replaces all previous environment variables).
+- **Mismatched Flag Warnings**: Providing stdio flags (`--env`, `--args`) when configuring a remote server or remote flags (`--header`, `--transport`) when configuring a stdio server outputs warnings and safely ignores incompatible flags.
+
+#### Examples
+
+```bash
+# Inspect server configuration and configured agents in current project
+mcps manage postgres
+
+# Inspect a globally configured server
+mcps manage memory -g
+
+# Update command arguments for an existing stdio server
+mcps manage postgres --args --read-only --port 5432 -y
+
+# Merge additional environment variables into an existing stdio server
+mcps manage postgres --env "DB_POOL=10" -y
+
+# Replace all environment variables with a new set using --clear-env
+mcps manage postgres --clear-env --env "POSTGRES_URL=postgresql://localhost:5432/db" -y
+
+# Clear all CLI arguments from a stdio server
+mcps manage postgres --clear-args -y
+
+# Switch an existing stdio server to a remote SSE server
+mcps manage github --url https://api.github.com/mcp/sse -t sse --header "Authorization: Bearer ghp_token" -y
+
+# Switch an existing remote server to a local command
+mcps manage github --command "npx -y @modelcontextprotocol/server-github" -y
+
+# Update server configuration on specific target agents only
+mcps manage postgres --args --timeout 60 -a cursor vscode -y
 ```
 
 ---
@@ -393,11 +478,12 @@ Agent configurations diverge significantly in syntax and structure. `mcps` maps 
 
 `mcps` exports a strongly-typed API for ESM and CommonJS.
 
-### Installation & Removal
+### Server Lifecycle: Install, Update, List & Remove
 
 ```typescript
 import {
   installMcpServer,
+  updateMcpServer,
   listInstalledMcpServers,
   removeMcpServer,
   parseMcpSource,
@@ -424,7 +510,30 @@ for (const record of installResult.results) {
   }
 }
 
-// 2. List installed MCP servers
+// 2. Update an MCP server (with automatic protocol sanitization and capability filtering)
+const updateResult = updateMcpServer({
+  serverName: "postgres",
+  config: {
+    command: "npx",
+    args: ["-y", "@modelcontextprotocol/server-postgres", "--max-connections", "20"],
+    env: {
+      POSTGRES_CONNECTION_STRING: "postgresql://localhost:5432/production",
+    },
+  },
+  agents: ["cursor", "vscode"],
+  global: false,
+});
+
+console.log(`Updated ${updateResult.serverName}:`);
+for (const record of updateResult.results) {
+  if (record.success) {
+    console.log(`  ${record.agent}: OK -> ${record.path}`);
+  } else {
+    console.error(`  ${record.agent}: Error -> ${record.error}`);
+  }
+}
+
+// 3. List installed MCP servers
 const servers = listInstalledMcpServers({
   global: false,
   agents: ["cursor", "vscode"],
@@ -434,7 +543,7 @@ for (const s of servers) {
   console.log(`${s.serverName} on ${s.agent} (${s.path})`);
 }
 
-// 3. Remove an MCP server
+// 4. Remove an MCP server
 const removeResults = removeMcpServer({
   name: "postgres",
   agents: ["cursor", "vscode"],
@@ -486,9 +595,9 @@ const server = memoryStore.readServer("cursor", "test-server");
 console.log(server);
 ```
 
-### Exported Interactive Utilities
+### Exported Utilities & Interactive Prompts
 
-The interactive wizard flows and prompt components are also exported for programmatic embedding:
+The interactive wizard flows, prompt components, and inspection/sanitization utilities are also exported for programmatic embedding:
 
 ```typescript
 import {
@@ -496,6 +605,13 @@ import {
   wizardAdd,
   wizardManage,
   wizardRemove,
+  displayServerDetails,
+  resolveTransport,
+  maskSecretValue,
+  maskSecretHeader,
+  sanitizeUpdatedServerConfig,
+  detectUpdateTransition,
+  promptSwitchServerType,
   promptScopeAndAgents,
   promptEnvConfig,
   promptHeadersConfig,
@@ -512,7 +628,8 @@ import {
 `mcps` is organized around decoupled deep modules:
 
 - **CLI Commands (`src/cli/`)**: Built with `commander`. Provides non-interactive execution with full flags and TTY wizard fallbacks.
-- **Interactive Wizards (`src/interactive/`)**: Terminal UI built with `@inquirer/prompts`. Handles scope selection, credential masking, multiline terminal and `$EDITOR` input, and cross-agent synchronization.
+- **Interactive Wizards (`src/interactive/`)**: Terminal UI built with `@inquirer/prompts`. Handles scope selection, credential masking, multiline terminal and `$EDITOR` input, in-place configuration editing, and cross-agent synchronization.
+- **Core Orchestration (`src/install-mcp-server.ts`, `src/update-mcp-server.ts`, `src/installer.ts`, `src/remove.ts`, `src/list.ts`)**: Pure functions orchestrating agent detection, protocol sanitization, config transformation, and persistence.
 - **Target Agent Resolver (`src/resolve-target-agents.ts`)**: Resolves target agents from CLI arguments, wildcards, auto-detection, and transport capability constraints.
 - **Agent Config Store (`src/config-store.ts`)**: Unified persistence engine behind a pluggable storage seam (`ConfigStoreAdapter`), handling path resolution, existence checks, and file serialization.
 - **Format Adapters (`src/formats/`)**: Isolated adapters for `json`, comment-preserving `jsonc` (via `jsonc-parser`), `yaml`, and `toml`.
