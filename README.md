@@ -12,6 +12,7 @@ Cross-platform Model Context Protocol (MCP) server manager, synchronizer, and co
 - **Multi-Format Storage**: Native read and write engines for JSON, JSONC (preserving existing comments and AST structure via `jsonc-parser`), YAML, and TOML.
 - **Declarative Dialect Transforms**: Intelligent transformation layer adapting standard `McpServerConfig` models into agent-specific field shapes (`command` array vs binary string, `cmd` vs `command`, `envs` vs `env` vs `environment`, `uri` vs `url`, transport indicators, timeouts, and metadata flags).
 - **Intelligent Source Resolution**: Accepts npm package specs, remote HTTP/SSE endpoints, local CLI commands, and Docker containers. Automatically strips npm scopes, package affixes, script extensions, and URL host clutter to infer clean server names.
+- **Config Clustering & Co-Hosted Deduplication**: Automatically detects agents sharing the same physical configuration target (such as Claude Code, GitHub Copilot CLI, and Qoder sharing `.mcp.json`). Deduplicates filesystem writes, keeps interactive selection synchronized via linked checkboxes, and reports co-configured and co-affected agents.
 - **Cross-Agent Synchronization & In-Place Editing**: Inspect installed MCP servers across project and global scopes, view parsed details with secret masking, edit configurations in-place with protocol switching (stdio <-> remote), and sync/clone configurations to other agents with automatic dialect and format translation.
 - **Dual Mode (Interactive TTY + Headless CLI)**: Rich interactive terminal wizards with multiline `.env`/header pasting, `$EDITOR` launching, and password masking for secrets, combined with robust CLI commands (`add`, `manage`, `list`, `remove`) and standard exit codes for CI/CD and autonomous agents.
 - **Pluggable Architecture**: Decoupled deep modules including `AgentConfigStore` (supporting filesystem and in-memory test adapters), `resolveTargetAgents` (capability and transport filtering), and declarative transform dialects.
@@ -116,7 +117,7 @@ When launched with no arguments, the main menu offers:
 4. **Scope & Agent Selection**:
    - Choose between **Project** (`.`) and **Global** (user home directory).
    - Scans filesystem to auto-detect installed agents in the chosen scope.
-   - Presents a checkbox list where detected agents are labeled with `[detected]` and pre-selected by default.
+   - Presents a synchronized linked checkbox list (`linkedCheckbox`): detected agents carry `[detected]` tags and are pre-selected by default. Agents sharing the same physical configuration file (e.g. `claude-code`, `github-copilot-cli`, and `qoder` in project scope) are grouped and labeled with `[shared: <agents>]`. Selecting or deselecting any agent automatically updates its linked co-hosted peers.
 5. **Arguments**: Configure optional CLI arguments (quote-aware parsing for paths with spaces).
 6. **Environment Variables & Secrets**:
    - `Skip / None`: Proceed without environment variables.
@@ -125,7 +126,7 @@ When launched with no arguments, the main menu offers:
    - `Enter key-value pairs one by one`: Prompts for individual variables. Automatically detects sensitive keys (`token`, `key`, `secret`, `password`, `auth`, `credential`) and masks input using password prompts.
 7. **HTTP Headers** (for remote servers):
    - Supports multiline terminal pasting (`Key: Value` or `Key=Value`), `$EDITOR` entry, or step-by-step entry with secret masking for authorization tokens.
-8. **Configuration Preview & Confirmation**: Displays normalized parameters before writing to disk.
+8. **Configuration Preview & Confirmation**: Displays normalized parameters before writing to disk, deduplicating writes across co-hosted config files and highlighting `(co-configured: <agents>)` on completion.
 
 ### Manage & Sync Wizard (`mcps` -> Manage, or `mcps manage [server-name]`)
 
@@ -139,18 +140,18 @@ When launched with no arguments, the main menu offers:
    - **Command (`command`)**: Update executable name or binary path.
    - **Remote Endpoints (`url`, `type`, `headers`)**: Modify remote URLs, toggle between HTTP and SSE transport, and manage HTTP headers.
    - **Reset & Discard**: Reset working changes back to the original values or cancel to discard edits without saving.
-   - Saves and persists updated configurations to target agent files using native formats and schema dialects.
+   - Saves and persists updated configurations to target agent files using native formats and schema dialects, displaying `(co-configured: <agents>)` feedback for shared configuration targets.
 5. Allows triggering **Sync / clone to other agents**:
    - Identifies candidate agents that do not currently have the server configured.
    - Filters candidate agents by scope and transport capability.
-   - Writes the server configuration to selected targets using their respective native config formats and schema dialects.
+   - Uses linked checkbox selection for candidate agents, keeping co-hosted targets in sync.
+   - Writes the server configuration to selected targets using their respective native config formats and schema dialects, displaying `(co-configured: <agents>)` feedback.
 
 ### Remove Wizard (`mcps remove` without name)
 
-
 1. Prompts for scope (**Project** or **Global**).
 2. Lists configured servers for selection.
-3. Removes the selected server from target agent configuration files with safety confirmation.
+3. Removes the selected server from target agent configuration files with safety confirmation, displaying `(co-affected: <agents>)` feedback when removing from shared configuration targets.
 
 ---
 
@@ -193,6 +194,15 @@ When neither `-a` nor `--all` is specified:
 1. `mcps` scans the project root or global home directories for installed agents.
 2. If agents are detected, filters them by transport capability (e.g. stdio-only agents like Claude Desktop are excluded when adding remote HTTP/SSE servers).
 3. If no agents are detected, logs a diagnostic warning and exits with code `1`.
+
+#### Co-Hosted Agent Deduplication
+
+When target agents share the same physical configuration file (e.g. Claude Code, GitHub Copilot CLI, and Qoder sharing project `.mcp.json`), `mcps` automatically clusters the targets, executes a single file write, and logs co-hosted feedback:
+
+```text
+claude-code .mcp.json
+  Note: Also configured for co-hosted agent(s): github-copilot-cli, qoder
+```
 
 #### Examples
 
@@ -291,6 +301,15 @@ mcps manage [server-name] [options]
 - **Clear Flags**: `--clear-env`, `--clear-args`, and `--clear-headers` strip their respective configuration fields. They can also be paired with replacement values (for instance, `--clear-env --env "NEW_VAR=1"` replaces all previous environment variables).
 - **Mismatched Flag Warnings**: Providing stdio flags (`--env`, `--args`) when configuring a remote server or remote flags (`--header`, `--transport`) when configuring a stdio server outputs warnings and safely ignores incompatible flags.
 
+#### Co-Hosted Agent Synchronization
+
+When updating a server on an agent that shares a physical configuration file with other agents, `mcps` deduplicates the operation to a single write and reports co-configured agents:
+
+```text
+claude-code: Successfully updated in .mcp.json
+  Note: Also configured for co-hosted agent(s): github-copilot-cli, qoder
+```
+
 #### Examples
 
 ```bash
@@ -342,6 +361,15 @@ mcps rm [name] [options]
 - `-g, --global`: Remove from global user-level configurations.
 - `-a, --agent <agents...>`: Filter removal to specific agents. Pass `'*'` to target all agents.
 - `-y, --yes`: Skip confirmation prompts.
+
+#### Co-Affected Agent Reporting
+
+When removing a server from a configuration file shared by multiple agents, `mcps` performs a single file mutation and reports all co-affected agents:
+
+```text
+claude-code removed postgres .mcp.json
+  Note: Also affects co-hosted agent(s): github-copilot-cli, qoder
+```
 
 #### Examples
 
@@ -419,6 +447,17 @@ When a source string is provided to `mcps add`, `mcps` parses and normalizes it 
 | **Trae** | `trae` | `trae-code`, `traecode`, `trae-ide` | Project, Global | stdio, http, sse | `jsonc` | `.trae/mcp.json` / `~/.trae/mcp.json` |
 | **VS Code** | `vscode` | `github-copilot` | Project, Global | stdio, http, sse | `jsonc` | `.vscode/mcp.json` / User `mcp.json` |
 | **Zed** | `zed` | - | Project, Global | stdio, http, sse | `jsonc` | `.zed/settings.json` / `~/.config/zed/settings.json` |
+
+### Co-Hosted Agent Configurations
+
+Several agents share identical configuration files and root keys. `mcps` automatically groups these agents into configuration clusters to deduplicate disk mutations and keep states synchronized:
+
+| Configuration Path | Key | Co-Hosted Agents | Scope |
+| :--- | :--- | :--- | :--- |
+| `.mcp.json` | `mcpServers` | `claude-code`, `github-copilot-cli`, `qoder` | Project |
+| `.cline/mcp.json` | `mcpServers` | `cline`, `cline-cli` | Project |
+| `.agents/mcp_config.json` | `mcpServers` | `antigravity`, `antigravity-cli` | Project |
+| `~/.gemini/config/mcp_config.json` | `mcpServers` | `antigravity`, `antigravity-cli` | Global |
 
 ### Environment Variable Overrides
 
@@ -504,7 +543,10 @@ const installResult = installMcpServer({
 console.log(`Configured ${installResult.serverName}:`);
 for (const record of installResult.results) {
   if (record.success) {
-    console.log(`  ${record.agent}: OK -> ${record.path}`);
+    const coHosted = record.coConfiguredAgents
+      ? ` (co-configured: ${record.coConfiguredAgents.join(", ")})`
+      : "";
+    console.log(`  ${record.agent}: OK -> ${record.path}${coHosted}`);
   } else {
     console.error(`  ${record.agent}: Error -> ${record.error}`);
   }
@@ -549,6 +591,13 @@ const removeResults = removeMcpServer({
   agents: ["cursor", "vscode"],
   global: false,
 });
+
+for (const record of removeResults) {
+  const coAffected = record.coAffectedAgents
+    ? ` (also affects: ${record.coAffectedAgents.join(", ")})`
+    : "";
+  console.log(`Removed from ${record.agent} at ${record.path}${coAffected}`);
+}
 ```
 
 ### Parsing Sources & Resolving Agents
@@ -595,6 +644,48 @@ const server = memoryStore.readServer("cursor", "test-server");
 console.log(server);
 ```
 
+### Config Clusters & Co-Hosted Agent Resolution
+
+Query and resolve agents sharing underlying physical configuration files:
+
+```typescript
+import {
+  resolveConfigClusters,
+  getCoHostedAgents,
+  getCandidateAgentsForScope,
+  sortAgentsWithClusters,
+  installToCompatibleAgents,
+} from "@wuyax/mcps";
+
+// 1. Find agents sharing configuration with Claude Code in project scope
+const coHosted = getCoHostedAgents("claude-code", { global: false });
+// ['github-copilot-cli', 'qoder']
+
+// 2. Resolve deduplicated clusters for a batch of agents
+const clusters = resolveConfigClusters(
+  ["claude-code", "github-copilot-cli", "cursor", "cline"],
+  { global: false },
+);
+for (const cluster of clusters) {
+  console.log(`Target: ${cluster.configPath} [${cluster.configKey}]`);
+  console.log(`  Target agents: ${cluster.targetAgents.join(", ")}`);
+  console.log(`  Unselected co-hosted: ${cluster.coHostedAgents.join(", ")}`);
+}
+
+// 3. Sort agents so cluster peers appear adjacent in lists
+const sorted = sortAgentsWithClusters(["github-copilot-cli", "cursor", "claude-code"]);
+// ['github-copilot-cli', 'claude-code', 'cursor']
+
+// 4. Batch-install to compatible agents with cluster deduplication
+const results = installToCompatibleAgents("my-server", serverConfig, {
+  allAgents: ["claude-code", "cursor", "claude-desktop"],
+  incompatible: [
+    { agent: "claude-desktop", reason: "Claude Desktop currently supports only stdio MCP servers." },
+  ],
+  global: false,
+});
+```
+
 ### Exported Utilities & Interactive Prompts
 
 The interactive wizard flows, prompt components, and inspection/sanitization utilities are also exported for programmatic embedding:
@@ -605,6 +696,12 @@ import {
   wizardAdd,
   wizardManage,
   wizardRemove,
+  linkedCheckbox,
+  buildLinkedAgentChoices,
+  groupInstalledServersByName,
+  normalizeServerConfig,
+  formatCoHostedBadge,
+  logCoHostedNotice,
   displayServerDetails,
   resolveTransport,
   maskSecretValue,
@@ -629,7 +726,9 @@ import {
 
 - **CLI Commands (`src/cli/`)**: Built with `commander`. Provides non-interactive execution with full flags and TTY wizard fallbacks.
 - **Interactive Wizards (`src/interactive/`)**: Terminal UI built with `@inquirer/prompts`. Handles scope selection, credential masking, multiline terminal and `$EDITOR` input, in-place configuration editing, and cross-agent synchronization.
+- **Linked Checkbox Prompt (`src/interactive/prompts/linked-checkbox.ts`)**: Extensible interactive checkbox prompt supporting linked peer selection and custom descriptive metadata.
 - **Core Orchestration (`src/install-mcp-server.ts`, `src/update-mcp-server.ts`, `src/installer.ts`, `src/remove.ts`, `src/list.ts`)**: Pure functions orchestrating agent detection, protocol sanitization, config transformation, and persistence.
+- **Config Clusters & Co-Hosted Deduplication (`src/resolve-config-clusters.ts`)**: Identifies agents sharing identical configuration files and keys, deduplicating physical disk operations and synchronizing interactive selection states.
 - **Target Agent Resolver (`src/resolve-target-agents.ts`)**: Resolves target agents from CLI arguments, wildcards, auto-detection, and transport capability constraints.
 - **Agent Config Store (`src/config-store.ts`)**: Unified persistence engine behind a pluggable storage seam (`ConfigStoreAdapter`), handling path resolution, existence checks, and file serialization.
 - **Format Adapters (`src/formats/`)**: Isolated adapters for `json`, comment-preserving `jsonc` (via `jsonc-parser`), `yaml`, and `toml`.
