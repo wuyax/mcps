@@ -4,7 +4,7 @@ import pc from "picocolors";
 import { getMcpAgentConfig } from "../agents.ts";
 import { listInstalledMcpServers } from "../list.ts";
 import { removeMcpServer } from "../remove.ts";
-import { sortAgentsWithClusters } from "../resolve-config-clusters.ts";
+import { agentConfigStore } from "../config-store.ts";
 import type { McpAgentType, McpScopeOptions } from "../types.ts";
 import { formatCoHostedBadge } from "../utils/co-hosted-feedback.ts";
 import { logger } from "../utils/logger.ts";
@@ -56,7 +56,7 @@ export const wizardRemove = async (options: WizardRemoveOptions = {}): Promise<b
     return false;
   }
 
-  const installedAgents = sortAgentsWithClusters(rawInstalledAgents, { global: isGlobal, cwd });
+  const installedAgents = agentConfigStore.sortAgentsByClusters(rawInstalledAgents, { global: isGlobal, cwd });
 
   let targetAgents = options.agents;
 

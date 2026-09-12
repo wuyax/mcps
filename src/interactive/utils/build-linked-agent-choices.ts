@@ -1,7 +1,7 @@
 import pc from "picocolors";
 
 import { getMcpAgentConfig } from "../../agents.ts";
-import { getCoHostedAgents } from "../../resolve-config-clusters.ts";
+import { agentConfigStore } from "../../config-store.ts";
 import type { LinkedChoice } from "../prompts/linked-checkbox.ts";
 import type { McpAgentType, McpScopeOptions } from "../../types.ts";
 
@@ -24,7 +24,7 @@ export const buildLinkedAgentChoices = (
   // Align initial checked state: if an agent is selected, its co-hosted agents must also be initially selected
   const alignedCheckedSet = new Set<McpAgentType>(checkedAgents);
   for (const agent of checkedAgents) {
-    const coHosted = getCoHostedAgents(agent, scopeOptions);
+    const coHosted = agentConfigStore.getCoHostedAgents(agent, scopeOptions);
     for (const co of coHosted) {
       if (agents.includes(co)) {
         alignedCheckedSet.add(co);
@@ -36,7 +36,7 @@ export const buildLinkedAgentChoices = (
     const config = getMcpAgentConfig(agent);
     const displayName = config?.displayName ?? agent;
     const isDetected = detectedAgents.includes(agent);
-    const coHosted = getCoHostedAgents(agent, scopeOptions).filter((co) =>
+    const coHosted = agentConfigStore.getCoHostedAgents(agent, scopeOptions).filter((co) =>
       agents.includes(co),
     );
 

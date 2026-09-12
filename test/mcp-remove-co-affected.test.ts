@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { removeMcpServer, removeMcpServerFromAgent } from "../src/remove.ts";
-import { installMcpServerForAgents } from "../src/installer.ts";
 import { agentConfigStore } from "../src/config-store.ts";
 
 describe("Co-affected and deduplicated removal", () => {
@@ -158,10 +157,10 @@ describe("Co-configured installation deduplication", () => {
   });
 
   it("deduplicates physical write when installing to co-hosted agents", () => {
-    const results = installMcpServerForAgents(
+    const results = agentConfigStore.writeServers(
+      ["antigravity", "antigravity-cli"],
       "myService",
       { command: "node", args: ["srv.js"] },
-      ["antigravity", "antigravity-cli"],
       { global: false, cwd: tempDir },
     );
 

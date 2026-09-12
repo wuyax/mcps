@@ -45,15 +45,11 @@ export {
   type TargetResolutionQuery,
   type TargetResolutionResult,
 } from "./resolve-target-agents.ts";
+// Backward-compatible thin wrappers (previously in installer.ts, now delegating to Store)
+export { installMcpServerForAgent, installMcpServerForAgents, installToCompatibleAgents } from "./install-compat.ts";
+export type { InstallToCompatibleAgentsOptions } from "./install-compat.ts";
+export { resolveMcpConfigTarget, getCandidateAgentsForScope } from "./config-store.ts";
 export {
-  installMcpServerForAgent,
-  installMcpServerForAgents,
-  installToCompatibleAgents,
-  type InstallToCompatibleAgentsOptions,
-} from "./installer.ts";
-export { resolveMcpConfigTarget } from "./resolve-config-target.ts";
-export {
-  getCandidateAgentsForScope,
   getCoHostedAgents,
   resolveConfigClusters,
   sortAgentsWithClusters,

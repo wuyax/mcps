@@ -7,7 +7,7 @@ import {
   getMcpAgentTypes,
 } from "../agents.ts";
 import { listInstalledMcpServers } from "../list.ts";
-import { sortAgentsWithClusters } from "../resolve-config-clusters.ts";
+import { agentConfigStore } from "../config-store.ts";
 import { resolveTargetAgents } from "../resolve-target-agents.ts";
 import type {
   McpAgentType,
@@ -204,7 +204,7 @@ const handleEditServerConfig = async (options: EditServerConfigOptions): Promise
       let targetAgents: McpAgentType[] = targetGroup.agents;
 
       if (targetGroup.agents.length > 1) {
-        const sortedAgents = sortAgentsWithClusters(targetGroup.agents, { global: isGlobal, cwd });
+        const sortedAgents = agentConfigStore.sortAgentsByClusters(targetGroup.agents, { global: isGlobal, cwd });
         const choices = buildLinkedAgentChoices({
           agents: sortedAgents,
           checkedAgents: sortedAgents,
@@ -412,7 +412,7 @@ export const wizardManage = async (options: WizardManageOptions = {}): Promise<v
         continue;
       }
 
-      const candidateAgents = sortAgentsWithClusters(rawCandidateAgents, { global: isGlobal, cwd });
+      const candidateAgents = agentConfigStore.sortAgentsByClusters(rawCandidateAgents, { global: isGlobal, cwd });
       const choices = buildLinkedAgentChoices({
         agents: candidateAgents,
         checkedAgents: [],

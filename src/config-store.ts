@@ -1,23 +1,78 @@
 import { existsSync } from "node:fs";
+import { join } from "node:path";
 
-import { getMcpAgentConfig } from "./agents.ts";
+import {
+  getMcpAgentConfig,
+  getMcpAgentsSupportingProjectScope,
+  getMcpAgentTypes,
+} from "./agents.ts";
 import {
   listServersInConfigFile,
   readConfigFile,
   removeServerFromConfigFile,
   writeServerToConfigFile,
 } from "./formats/index.ts";
-import { resolveMcpConfigTarget, type McpConfigTarget } from "./resolve-config-target.ts";
+import { transformServerConfigForAgent } from "./transforms/index.ts";
 import type {
+  ConfigCluster,
   McpAgentConfig,
   McpAgentType,
   McpConfigFormat,
+  McpInstallResultForAgent,
   McpScopeOptions,
+  McpServerConfig,
+  RemoveMcpServerResult,
 } from "./types.ts";
 import { deleteNestedValue } from "./utils/delete-nested-value.ts";
 import { getNestedValue } from "./utils/get-nested-value.ts";
 import { isPlainObject } from "./utils/is-plain-object.ts";
 import { setNestedValue } from "./utils/set-nested-value.ts";
+import { toErrorMessage } from "./utils/to-error-message.ts";
+
+// ---------------------------------------------------------------------------
+// McpConfigTarget — internalized from resolve-config-target.ts
+// ---------------------------------------------------------------------------
+
+export interface McpConfigTarget {
+  configPath: string;
+  configKey: string;
+}
+
+const resolveMcpConfigTarget = (
+  agent: McpAgentConfig,
+  options: McpScopeOptions = {},
+): McpConfigTarget => {
+  const isGlobal = options.global ?? false;
+  const cwd = options.cwd ?? process.cwd();
+
+  const configPath = agent.resolveConfigPath
+    ? agent.resolveConfigPath({ global: isGlobal, cwd })
+    : !isGlobal && agent.projectConfigPath
+      ? join(cwd, agent.projectConfigPath)
+      : agent.globalConfigPath;
+
+  const configKey = !isGlobal && agent.projectConfigKey ? agent.projectConfigKey : agent.configKey;
+
+  return { configPath, configKey };
+};
+
+// Re-export for public API compatibility
+export { resolveMcpConfigTarget };
+
+// ---------------------------------------------------------------------------
+// Scope-based candidate resolution — internalized from resolve-config-clusters.ts
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns candidate agent types relevant for the given scope.
+ */
+export const getCandidateAgentsForScope = (options: McpScopeOptions = {}): McpAgentType[] => {
+  return options.global ? getMcpAgentTypes() : getMcpAgentsSupportingProjectScope();
+};
+
+// ---------------------------------------------------------------------------
+// ConfigStoreAdapter seam — physical storage abstraction
+// ---------------------------------------------------------------------------
 
 export interface ConfigTargetDescriptor {
   filePath: string;
@@ -155,6 +210,10 @@ export class MemoryConfigStoreAdapter implements ConfigStoreAdapter {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Result types
+// ---------------------------------------------------------------------------
+
 export interface AgentConfigStoreWriteResult {
   path: string;
 }
@@ -170,9 +229,13 @@ export interface AgentConfigStoreListResult {
   servers: Record<string, unknown>;
 }
 
+// ---------------------------------------------------------------------------
+// AgentConfigStore — deep module
+// ---------------------------------------------------------------------------
+
 /**
- * Deep module: Coordinates Agent config target resolution, file checking,
- * and format persistence behind a unified seam.
+ * Deep module: Coordinates Agent config target resolution, cluster deduplication,
+ * dialect transforms, file checking, and format persistence behind a unified seam.
  */
 export class AgentConfigStore {
   constructor(private adapter: ConfigStoreAdapter = new FsConfigStoreAdapter()) {}
@@ -180,6 +243,8 @@ export class AgentConfigStore {
   getAdapter(): ConfigStoreAdapter {
     return this.adapter;
   }
+
+  // ---- Single-agent primitives ----
 
   resolveTarget(
     agent: McpAgentType | McpAgentConfig,
@@ -259,6 +324,207 @@ export class AgentConfigStore {
     const { exists, servers } = this.listServers(agent, options);
     if (!exists) return undefined;
     return servers[serverName];
+  }
+
+  // ---- Cluster & co-hosted awareness ----
+
+  /**
+   * Returns all other agents sharing the exact same physical configuration target
+   * (same configPath and configKey) for the given scope.
+   */
+  getCoHostedAgents(
+    agentType: McpAgentType,
+    options: McpScopeOptions = {},
+  ): McpAgentType[] {
+    const currentAgent = getMcpAgentConfig(agentType);
+    const currentTarget = resolveMcpConfigTarget(currentAgent, options);
+    const candidates = getCandidateAgentsForScope(options);
+
+    const coHosted: McpAgentType[] = [];
+    for (const candidateType of candidates) {
+      if (candidateType === agentType) continue;
+      const candidateConfig = getMcpAgentConfig(candidateType);
+      const candidateTarget = resolveMcpConfigTarget(candidateConfig, options);
+      if (
+        candidateTarget.configPath === currentTarget.configPath &&
+        candidateTarget.configKey === currentTarget.configKey
+      ) {
+        coHosted.push(candidateType);
+      }
+    }
+
+    return coHosted;
+  }
+
+  /**
+   * Resolves configuration clusters for a given list of requested agents.
+   * Groups requested agents sharing the same physical config path, and tracks
+   * any remaining co-hosted agents sharing the same target that were not in the request.
+   */
+  resolveConfigClusters(
+    agentTypes: McpAgentType[],
+    options: McpScopeOptions = {},
+  ): ConfigCluster[] {
+    const clustersByPath = new Map<string, Map<string, ConfigCluster>>();
+
+    for (const agentType of agentTypes) {
+      const agentConfig = getMcpAgentConfig(agentType);
+      const target = resolveMcpConfigTarget(agentConfig, options);
+
+      let keyMap = clustersByPath.get(target.configPath);
+      if (!keyMap) {
+        keyMap = new Map();
+        clustersByPath.set(target.configPath, keyMap);
+      }
+
+      let cluster = keyMap.get(target.configKey);
+      if (!cluster) {
+        const allCoHosted = this.getCoHostedAgents(agentType, options);
+        cluster = {
+          configPath: target.configPath,
+          configKey: target.configKey,
+          targetAgents: [],
+          coHostedAgents: allCoHosted,
+        };
+        keyMap.set(target.configKey, cluster);
+      }
+
+      if (!cluster.targetAgents.includes(agentType)) {
+        cluster.targetAgents.push(agentType);
+      }
+    }
+
+    const clusters: ConfigCluster[] = [];
+    for (const keyMap of clustersByPath.values()) {
+      for (const cluster of keyMap.values()) {
+        cluster.coHostedAgents = cluster.coHostedAgents.filter(
+          (co) => !cluster.targetAgents.includes(co),
+        );
+        clusters.push(cluster);
+      }
+    }
+
+    return clusters;
+  }
+
+  /**
+   * Sorts agent types so that agents sharing the same physical config target
+   * appear adjacent to each other in the returned array.
+   */
+  sortAgentsByClusters(
+    agentTypes: McpAgentType[],
+    options: McpScopeOptions = {},
+  ): McpAgentType[] {
+    const clusters = this.resolveConfigClusters(agentTypes, options);
+    const sorted: McpAgentType[] = [];
+
+    for (const cluster of clusters) {
+      for (const agent of cluster.targetAgents) {
+        if (!sorted.includes(agent)) {
+          sorted.push(agent);
+        }
+      }
+    }
+
+    return sorted;
+  }
+
+  // ---- Batch operations with automatic clustering & dialect transforms ----
+
+  /**
+   * Batch write: transforms and writes a server config to multiple agents,
+   * with automatic cluster deduplication, dialect transform, and co-hosted awareness.
+   * Callers pass standard McpServerConfig; the Store applies per-Agent dialect transforms
+   * internally before persisting.
+   */
+  writeServers(
+    agents: McpAgentType[],
+    serverName: string,
+    serverConfig: McpServerConfig,
+    options: McpScopeOptions = {},
+  ): McpInstallResultForAgent[] {
+    const clusters = this.resolveConfigClusters(agents, options);
+    const resultsByAgent = new Map<McpAgentType, McpInstallResultForAgent>();
+    const isGlobal = options.global ?? false;
+
+    for (const cluster of clusters) {
+      const primaryAgentType = cluster.targetAgents[0]!;
+      const primaryAgent = getMcpAgentConfig(primaryAgentType);
+
+      try {
+        const transformed = transformServerConfigForAgent(primaryAgent, serverName, serverConfig, {
+          global: isGlobal,
+        });
+        const descriptor = this.resolveDescriptor(primaryAgent, options);
+        this.adapter.writeServer(descriptor, serverName, transformed);
+
+        for (const agentType of cluster.targetAgents) {
+          resultsByAgent.set(agentType, {
+            agent: agentType,
+            success: true,
+            path: cluster.configPath,
+            coConfiguredAgents:
+              cluster.coHostedAgents.length > 0 ? cluster.coHostedAgents : undefined,
+          });
+        }
+      } catch (error) {
+        const errorMsg = toErrorMessage(error);
+        for (const agentType of cluster.targetAgents) {
+          resultsByAgent.set(agentType, {
+            agent: agentType,
+            success: false,
+            path: cluster.configPath,
+            error: errorMsg,
+          });
+        }
+      }
+    }
+
+    return agents.map((agentType) => resultsByAgent.get(agentType)!);
+  }
+
+  /**
+   * Batch remove: removes a server from multiple agents' configs,
+   * with automatic cluster deduplication and co-hosted awareness.
+   */
+  removeServers(
+    agents: McpAgentType[],
+    serverName: string,
+    options: McpScopeOptions = {},
+  ): RemoveMcpServerResult[] {
+    const clusters = this.resolveConfigClusters(agents, options);
+    const results: RemoveMcpServerResult[] = [];
+
+    for (const cluster of clusters) {
+      const primaryAgentType = cluster.targetAgents[0]!;
+      const primaryAgent = getMcpAgentConfig(primaryAgentType);
+
+      try {
+        const { removed } = this.removeServer(primaryAgent, serverName, options);
+
+        for (const agentType of cluster.targetAgents) {
+          results.push({
+            agent: agentType,
+            path: cluster.configPath,
+            removed,
+            coAffectedAgents:
+              removed && cluster.coHostedAgents.length > 0 ? cluster.coHostedAgents : undefined,
+          });
+        }
+      } catch (error) {
+        const errorMsg = toErrorMessage(error);
+        for (const agentType of cluster.targetAgents) {
+          results.push({
+            agent: agentType,
+            path: cluster.configPath,
+            removed: false,
+            error: errorMsg,
+          });
+        }
+      }
+    }
+
+    return results;
   }
 }
 
