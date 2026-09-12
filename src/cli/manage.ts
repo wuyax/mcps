@@ -12,6 +12,7 @@ import type {
   McpScopeOptions,
   McpServerConfig,
 } from "../types.ts";
+import { applyServerConfigDelta } from "../server-config.ts";
 import { updateMcpServer } from "../update-mcp-server.ts";
 import { displayServerDetails } from "../utils/display-server-details.ts";
 import { logCoHostedNotice } from "../utils/co-hosted-feedback.ts";
@@ -87,12 +88,6 @@ export const mcpManageCommand = new Command("manage")
       const isInteractive = Boolean(process.stdin.isTTY && !options.yes);
 
       if (hasModifications) {
-        if (options.url !== undefined && options.command !== undefined) {
-          logger.error('Cannot specify both "--url" (remote) and "--command" (stdio) simultaneously.');
-          process.exitCode = 1;
-          return;
-        }
-
         if (!serverName) {
           logger.error('Missing required argument: "server-name" when passing modification flags.');
           process.exitCode = 1;
@@ -104,74 +99,43 @@ export const mcpManageCommand = new Command("manage")
           return;
         }
 
-        const isCurrentRemote = Boolean(targetGroup.config.url && targetGroup.config.url.length > 0);
-        const willBeRemote =
-          options.url !== undefined ? true : options.command !== undefined ? false : isCurrentRemote;
+        const parsedEnv = options.env !== undefined ? parseKeyValueList(options.env, "=") : undefined;
+        const parsedHeaders = options.header !== undefined ? parseKeyValueList(options.header, ":") : undefined;
 
-        if (willBeRemote) {
-          const ignoredStdioFlags: string[] = [];
-          if (options.env !== undefined) ignoredStdioFlags.push("--env");
-          if (options.clearEnv) ignoredStdioFlags.push("--clear-env");
-          if (options.args !== undefined) ignoredStdioFlags.push("--args");
-          if (options.clearArgs) ignoredStdioFlags.push("--clear-args");
-          if (ignoredStdioFlags.length > 0) {
-            const hint =
-              options.url !== undefined
-                ? "When configuring a remote server, stdio flags are ignored."
-                : "Use --command to switch to stdio mode.";
-            logger.warn(
-              `Server "${serverName}" is a remote server. The following stdio flags will be ignored: ${ignoredStdioFlags.join(", ")}. ${hint}`,
-            );
-          }
-        } else {
-          const ignoredRemoteFlags: string[] = [];
-          if (options.header !== undefined) ignoredRemoteFlags.push("--header");
-          if (options.clearHeaders) ignoredRemoteFlags.push("--clear-headers");
-          if (options.transport !== undefined) ignoredRemoteFlags.push("--transport");
-          if (ignoredRemoteFlags.length > 0) {
-            const hint =
-              options.command !== undefined
-                ? "When configuring a stdio server, remote flags are ignored."
-                : "Use --url to switch to remote mode.";
-            logger.warn(
-              `Server "${serverName}" is a stdio server. The following remote flags will be ignored: ${ignoredRemoteFlags.join(", ")}. ${hint}`,
-            );
-          }
+        let deltaResult;
+        try {
+          deltaResult = applyServerConfigDelta(targetGroup.config, {
+            command: options.command,
+            args: options.args,
+            clearArgs: options.clearArgs,
+            env: parsedEnv,
+            clearEnv: options.clearEnv,
+            url: options.url,
+            transport: resolveTransport(options.transport),
+            headers: parsedHeaders,
+            clearHeaders: options.clearHeaders,
+          });
+        } catch (error) {
+          logger.error(toErrorMessage(error));
+          process.exitCode = 1;
+          return;
         }
 
-        const incomingDelta: McpServerConfig = {};
+        if (deltaResult.ignoredFlags.length > 0) {
+          const isRemote = deltaResult.protocol === "remote";
+          const hint = isRemote
+            ? options.url !== undefined
+              ? "When configuring a remote server, stdio flags are ignored."
+              : "Use --command to switch to stdio mode."
+            : options.command !== undefined
+              ? "When configuring a stdio server, remote flags are ignored."
+              : "Use --url to switch to remote mode.";
+          logger.warn(
+            `Server "${serverName}" is a ${isRemote ? "remote" : "stdio"} server. The following ${isRemote ? "stdio" : "remote"} flags will be ignored: ${deltaResult.ignoredFlags.join(", ")}. ${hint}`,
+          );
+        }
 
-        if (options.command !== undefined) {
-          incomingDelta.command = options.command;
-        }
-        if (options.clearArgs) {
-          incomingDelta.args = undefined;
-        }
-        if (options.args !== undefined) {
-          incomingDelta.args = options.args;
-        }
-        if (options.url !== undefined) {
-          incomingDelta.url = options.url;
-        }
-        if (options.transport !== undefined) {
-          incomingDelta.type = resolveTransport(options.transport);
-        }
-        if (options.clearEnv) {
-          incomingDelta.env = undefined;
-        }
-        if (options.env !== undefined) {
-          const parsedEnv = parseKeyValueList(options.env, "=");
-          const baseEnv = options.clearEnv ? {} : (targetGroup.config.env ?? {});
-          incomingDelta.env = { ...baseEnv, ...parsedEnv };
-        }
-        if (options.clearHeaders) {
-          incomingDelta.headers = undefined;
-        }
-        if (options.header !== undefined) {
-          const parsedHeaders = parseKeyValueList(options.header, ":");
-          const baseHeaders = options.clearHeaders ? {} : (targetGroup.config.headers ?? {});
-          incomingDelta.headers = { ...baseHeaders, ...parsedHeaders };
-        }
+        const incomingDelta: McpServerConfig = deltaResult.config;
 
         let targetAgents: McpAgentType[] = targetGroup.agents;
         if (options.agent !== undefined) {

@@ -10,14 +10,18 @@ export {
   mcpAgents,
   resolveMcpAgentAlias,
 } from "./agents.ts";
-export { buildMcpServerConfig } from "./build-server-config.ts";
 export {
+  applyServerConfigDelta,
+  buildMcpServerConfig,
   isRemoteServerConfig,
   isStdioServerConfig,
   parseServerConfig,
+  type ApplyServerConfigDeltaResult,
+  type BuildMcpServerConfigOptions,
   type McpRemoteServerConfig,
   type McpStdioServerConfig,
-} from "./parse-server-config.ts";
+  type ServerConfigDeltaOptions,
+} from "./server-config.ts";
 export { DEFAULT_REMOTE_TRANSPORT, NPX_COMMAND, NPX_DASH_Y } from "./constants.ts";
 export {
   listServersInConfigFile,

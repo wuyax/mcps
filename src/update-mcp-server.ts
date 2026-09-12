@@ -1,105 +1,27 @@
 import { agentConfigStore } from "./config-store.ts";
 import { listInstalledMcpServers } from "./list.ts";
 import { resolveTargetAgents } from "./resolve-target-agents.ts";
+import {
+  detectUpdateTransition,
+  sanitizeUpdatedServerConfig,
+  toRemoteServerConfig,
+  toStdioServerConfig,
+  type UpdateTransitionType,
+} from "./server-config.ts";
 import type {
   McpInstallResultForAgent,
-  McpRemoteTransport,
   McpServerConfig,
   McpTransportType,
   UpdateMcpServerOptions,
   UpdateMcpServerResult,
 } from "./types.ts";
 
-/**
- * Transforms a server configuration into a clean remote configuration,
- * stripping stdio-exclusive fields (command, args, env).
- */
-export const toRemoteServerConfig = (
-  config: McpServerConfig,
-  defaultTransport: McpRemoteTransport = "http",
-): McpServerConfig => {
-  const {
-    command: _droppedCommand,
-    args: _droppedArgs,
-    env: _droppedEnv,
-    ...remoteConfig
-  } = config;
-  return {
-    ...remoteConfig,
-    type: remoteConfig.type ?? defaultTransport,
-  };
-};
-
-/**
- * Transforms a server configuration into a clean stdio configuration,
- * stripping remote-exclusive fields (url, type, headers).
- */
-export const toStdioServerConfig = (config: McpServerConfig): McpServerConfig => {
-  const {
-    url: _droppedUrl,
-    type: _droppedType,
-    headers: _droppedHeaders,
-    ...stdioConfig
-  } = config;
-  return stdioConfig;
-};
-
-export type UpdateTransitionType =
-  | "switch-to-remote"
-  | "switch-to-stdio"
-  | "merge-remote"
-  | "merge-stdio";
-
-/**
- * Determines the transition category when updating an MCP server configuration.
- */
-export const detectUpdateTransition = (
-  incoming: McpServerConfig,
-  previous?: McpServerConfig,
-): UpdateTransitionType => {
-  if (!previous) {
-    return incoming.url ? "switch-to-remote" : "switch-to-stdio";
-  }
-  if (incoming.url && !incoming.command) {
-    return "switch-to-remote";
-  }
-  if (incoming.command && !incoming.url) {
-    return "switch-to-stdio";
-  }
-  if (incoming.url || (!incoming.command && previous.url)) {
-    return "merge-remote";
-  }
-  return "merge-stdio";
-};
-
-/**
- * Strips obsolete fields when switching between stdio and remote protocols.
- * When switching to remote (url is provided), stdio fields (command, args, env) are removed.
- * When switching to stdio (command is provided), remote fields (url, type, headers) are removed.
- */
-export const sanitizeUpdatedServerConfig = (
-  incoming: McpServerConfig,
-  previous?: McpServerConfig,
-): McpServerConfig => {
-  const transition = detectUpdateTransition(incoming, previous);
-  const targetTransport = incoming.type ?? previous?.type ?? "http";
-
-  switch (transition) {
-    case "switch-to-remote": {
-      const cleanBase = previous ? toRemoteServerConfig(previous, targetTransport) : {};
-      return toRemoteServerConfig({ ...cleanBase, ...incoming }, targetTransport);
-    }
-    case "switch-to-stdio": {
-      const cleanBase = previous ? toStdioServerConfig(previous) : {};
-      return toStdioServerConfig({ ...cleanBase, ...incoming });
-    }
-    case "merge-remote": {
-      return toRemoteServerConfig({ ...previous, ...incoming }, targetTransport);
-    }
-    case "merge-stdio": {
-      return toStdioServerConfig({ ...previous, ...incoming });
-    }
-  }
+export {
+  detectUpdateTransition,
+  sanitizeUpdatedServerConfig,
+  toRemoteServerConfig,
+  toStdioServerConfig,
+  type UpdateTransitionType,
 };
 
 /**

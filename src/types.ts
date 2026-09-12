@@ -186,3 +186,10 @@ export interface UpdateMcpServerResult {
   results: McpInstallResultForAgent[];
   incompatible: { agent: McpAgentType; reason: string }[];
 }
+
+export type UpdateTransitionType =
+  | "switch-to-remote"
+  | "switch-to-stdio"
+  | "merge-remote"
+  | "merge-stdio";
+
