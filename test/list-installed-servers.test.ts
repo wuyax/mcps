@@ -37,8 +37,8 @@ describe("listInstalledMcpServers & groupInstalledServersByName (Deep Query Modu
       },
       {
         serverName: "srv-b",
-        agent: "windsurf" as any,
-        path: "/fake/windsurf.json",
+        agent: "vscode",
+        path: "/fake/vscode.json",
         config: { url: "http://localhost:4000" }, // Divergent configuration!
         serverConfig: { type: "http", url: "http://localhost:4000" },
       },
@@ -58,7 +58,8 @@ describe("listInstalledMcpServers & groupInstalledServersByName (Deep Query Modu
     const srvB = grouped.get("srv-b");
     expect(srvB).toBeDefined();
     expect(srvB?.serverName).toBe("srv-b");
-    expect(srvB?.agents).toEqual(["cursor", "windsurf"]);
+    expect(srvB?.agents).toEqual(["cursor", "vscode"]);
+    expect(srvB?.paths).toEqual(["/fake/cursor.json", "/fake/vscode.json"]);
     expect(srvB?.hasDivergence).toBe(true);
   });
 

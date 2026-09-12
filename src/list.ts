@@ -1,4 +1,4 @@
-import { getMcpAgentConfig, getMcpAgentTypes } from "./agents.ts";
+import { getMcpAgentTypes } from "./agents.ts";
 import { agentConfigStore } from "./config-store.ts";
 import { parseServerConfig } from "./parse-server-config.ts";
 import type {
@@ -16,34 +16,24 @@ export interface ListInstalledMcpServersOptions extends McpScopeOptions {
 }
 
 /**
- * Deep module query: Lists installed MCP servers across agents,
- * caching file reads for co-hosted agents sharing the same physical configuration file.
+ * Deep module query: Lists installed MCP servers across agents.
+ * Adapter read caching is encapsulated by AgentConfigStore.
  */
 export const listInstalledMcpServers = (
   options: ListInstalledMcpServersOptions = {},
 ): ListedMcpServer[] => {
   const agentTypes = options.agents ?? getMcpAgentTypes();
   const collected: ListedMcpServer[] = [];
-  const readCache = new Map<string, { path: string; exists: boolean; servers: Record<string, unknown> }>();
+  const results = agentConfigStore.listServersForAgents(agentTypes, options);
 
-  for (const agentType of agentTypes) {
-    const agent = getMcpAgentConfig(agentType);
-    const descriptor = agentConfigStore.resolveDescriptor(agent, options);
-    const cacheKey = `${descriptor.filePath}::${descriptor.dottedKey ?? ""}`;
+  for (const item of results) {
+    if (!item.exists) continue;
 
-    let cached = readCache.get(cacheKey);
-    if (!cached) {
-      cached = agentConfigStore.listServers(agent, options);
-      readCache.set(cacheKey, cached);
-    }
-
-    if (!cached.exists) continue;
-
-    for (const [serverName, rawConfig] of Object.entries(cached.servers)) {
+    for (const [serverName, rawConfig] of Object.entries(item.servers)) {
       collected.push({
         serverName,
-        agent: agentType,
-        path: cached.path,
+        agent: item.agent,
+        path: item.path,
         config: rawConfig,
         serverConfig: parseServerConfig(rawConfig),
       });

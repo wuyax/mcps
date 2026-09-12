@@ -210,14 +210,18 @@ export const detectUpdateTransition = (
   if (!previous) {
     return incoming.url ? "switch-to-remote" : "switch-to-stdio";
   }
+
+  const previousIsRemote = Boolean(previous.url && previous.url.length > 0);
+
+  if (previousIsRemote) {
+    if (incoming.command && !incoming.url) {
+      return "switch-to-stdio";
+    }
+    return "merge-remote";
+  }
+
   if (incoming.url && !incoming.command) {
     return "switch-to-remote";
-  }
-  if (incoming.command && !incoming.url) {
-    return "switch-to-stdio";
-  }
-  if (incoming.url || (!incoming.command && previous.url)) {
-    return "merge-remote";
   }
   return "merge-stdio";
 };

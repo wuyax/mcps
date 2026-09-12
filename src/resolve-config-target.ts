@@ -1,6 +1,5 @@
+import type { McpScopeOptions } from "./types.ts";
+
 export { resolveMcpConfigTarget, type McpConfigTarget } from "./config-store.ts";
 
-export type ResolveMcpConfigTargetOptions = {
-  global?: boolean;
-  cwd?: string;
-};
+export type ResolveMcpConfigTargetOptions = McpScopeOptions;

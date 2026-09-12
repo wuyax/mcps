@@ -305,6 +305,35 @@ export class AgentConfigStore {
     return { path: descriptor.filePath, exists: true, servers };
   }
 
+  /**
+   * Batch lists servers for multiple agents, caching adapter reads for co-hosted
+   * agents that share the exact same physical configuration file and dotted key.
+   */
+  listServersForAgents(
+    agents: McpAgentType[],
+    options: McpScopeOptions = {},
+  ): Array<{ agent: McpAgentType; path: string; exists: boolean; servers: Record<string, unknown> }> {
+    const readCache = new Map<string, AgentConfigStoreListResult>();
+
+    return agents.map((agentType) => {
+      const descriptor = this.resolveDescriptor(agentType, options);
+      const cacheKey = `${descriptor.filePath}::${descriptor.dottedKey ?? ""}`;
+
+      let cached = readCache.get(cacheKey);
+      if (!cached) {
+        cached = this.listServers(agentType, options);
+        readCache.set(cacheKey, cached);
+      }
+
+      return {
+        agent: agentType,
+        path: cached.path,
+        exists: cached.exists,
+        servers: cached.servers,
+      };
+    });
+  }
+
   read(
     agent: McpAgentType | McpAgentConfig,
     options: McpScopeOptions = {},
@@ -429,6 +458,16 @@ export class AgentConfigStore {
     return sorted;
   }
 
+  /**
+   * Alias for sortAgentsByClusters for backward compatibility.
+   */
+  sortAgentsWithClusters(
+    agentTypes: McpAgentType[],
+    options: McpScopeOptions = {},
+  ): McpAgentType[] {
+    return this.sortAgentsByClusters(agentTypes, options);
+  }
+
   // ---- Batch operations with automatic clustering & dialect transforms ----
 
   /**
@@ -493,7 +532,7 @@ export class AgentConfigStore {
     options: McpScopeOptions = {},
   ): RemoveMcpServerResult[] {
     const clusters = this.resolveConfigClusters(agents, options);
-    const results: RemoveMcpServerResult[] = [];
+    const resultsByAgent = new Map<McpAgentType, RemoveMcpServerResult>();
 
     for (const cluster of clusters) {
       const primaryAgentType = cluster.targetAgents[0]!;
@@ -503,7 +542,7 @@ export class AgentConfigStore {
         const { removed } = this.removeServer(primaryAgent, serverName, options);
 
         for (const agentType of cluster.targetAgents) {
-          results.push({
+          resultsByAgent.set(agentType, {
             agent: agentType,
             path: cluster.configPath,
             removed,
@@ -514,7 +553,7 @@ export class AgentConfigStore {
       } catch (error) {
         const errorMsg = toErrorMessage(error);
         for (const agentType of cluster.targetAgents) {
-          results.push({
+          resultsByAgent.set(agentType, {
             agent: agentType,
             path: cluster.configPath,
             removed: false,
@@ -524,7 +563,7 @@ export class AgentConfigStore {
       }
     }
 
-    return results;
+    return agents.map((agentType) => resultsByAgent.get(agentType)!);
   }
 }
 

@@ -3,8 +3,7 @@ import pc from "picocolors";
 
 import { wizardManage } from "../interactive/wizard-manage.ts";
 import {
-  groupInstalledServersByName,
-  listInstalledMcpServers,
+  queryGroupedInstalledServers,
   type GroupedInstalledServer,
 } from "../list.ts";
 import type {
@@ -41,8 +40,7 @@ const requireTargetServerGroup = (
   serverName: string,
   scope: McpScopeOptions,
 ): GroupedInstalledServer | undefined => {
-  const installed = listInstalledMcpServers(scope);
-  const grouped = groupInstalledServersByName(installed);
+  const grouped = queryGroupedInstalledServers(scope);
   const targetGroup = grouped.get(serverName);
   if (!targetGroup) {
     logger.error(

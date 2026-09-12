@@ -24,7 +24,12 @@ export const resolveConfigClusters = (
  * Sorts agent types so that agents sharing the same physical config target
  * appear adjacent to each other in the returned array.
  */
-export const sortAgentsWithClusters = (
+export const sortAgentsByClusters = (
   agentTypes: McpAgentType[],
   options: McpScopeOptions = {},
 ): McpAgentType[] => agentConfigStore.sortAgentsByClusters(agentTypes, options);
+
+/**
+ * Backward-compatible alias for sortAgentsByClusters.
+ */
+export const sortAgentsWithClusters = sortAgentsByClusters;

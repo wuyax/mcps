@@ -138,4 +138,38 @@ describe("server-config domain module", () => {
       expect(isStdioServerConfig({ url: "https://api.com" })).toBe(false);
     });
   });
+
+  describe("detectUpdateTransition", () => {
+    it("returns merge-remote when updating url on existing remote server", () => {
+      const transition = detectUpdateTransition(
+        { url: "https://new.example.com" },
+        { url: "https://old.example.com", type: "http" },
+      );
+      expect(transition).toBe("merge-remote");
+    });
+
+    it("returns merge-stdio when updating command on existing stdio server", () => {
+      const transition = detectUpdateTransition(
+        { command: "python" },
+        { command: "node", args: ["srv.js"] },
+      );
+      expect(transition).toBe("merge-stdio");
+    });
+
+    it("returns switch-to-stdio when adding command to remote server", () => {
+      const transition = detectUpdateTransition(
+        { command: "python" },
+        { url: "https://example.com" },
+      );
+      expect(transition).toBe("switch-to-stdio");
+    });
+
+    it("returns switch-to-remote when adding url to stdio server", () => {
+      const transition = detectUpdateTransition(
+        { url: "https://example.com" },
+        { command: "node" },
+      );
+      expect(transition).toBe("switch-to-remote");
+    });
+  });
 });

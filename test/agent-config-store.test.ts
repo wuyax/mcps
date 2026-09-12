@@ -24,8 +24,8 @@ describe("AgentConfigStore with MemoryConfigStoreAdapter", () => {
     expect(initialList.servers).toEqual({});
 
     // 2. Write server in project scope
-    const serverPayload = { command: "npx", args: ["-y", "test-mcp"] };
-    const writeResult = store.writeServer("cursor", "test-srv", serverPayload, {
+    const testServerConfig = { command: "npx", args: ["-y", "test-mcp"] };
+    const writeResult = store.writeServer("cursor", "test-srv", testServerConfig, {
       cwd: fakeCwd,
     });
     expect(writeResult.path).toBe(join(fakeCwd, ".cursor", "mcp.json"));
@@ -34,18 +34,18 @@ describe("AgentConfigStore with MemoryConfigStoreAdapter", () => {
     const afterWriteList = store.listServers("cursor", { cwd: fakeCwd });
     expect(afterWriteList.exists).toBe(true);
     expect(afterWriteList.servers).toEqual({
-      "test-srv": serverPayload,
+      "test-srv": testServerConfig,
     });
 
     // 4. readServer returns the server config
     const read = store.readServer("cursor", "test-srv", { cwd: fakeCwd });
-    expect(read).toEqual(serverPayload);
+    expect(read).toEqual(testServerConfig);
 
     // 4.1 read returns the entire config file object
     const wholeFile = store.read("cursor", { cwd: fakeCwd });
     expect(wholeFile).toEqual({
       mcpServers: {
-        "test-srv": serverPayload,
+        "test-srv": testServerConfig,
       },
     });
 
@@ -83,6 +83,74 @@ describe("AgentConfigStore with MemoryConfigStoreAdapter", () => {
     expect(memoryAdapter.exists(configPath)).toBe(true);
     const dump = memoryAdapter.dump();
     expect(dump[configPath].servers).toBeDefined();
+  });
+
+  it("deduplicates batch writeServers and removeServers in memory across co-hosted agents", () => {
+    const memoryAdapter = new MemoryConfigStoreAdapter();
+    const store = new AgentConfigStore(memoryAdapter);
+    const fakeCwd = "/virtual/workspace";
+
+    // 1. Single agent write: antigravity reports antigravity-cli as coConfigured
+    const singleWrite = store.writeServers(
+      ["antigravity"],
+      "single-srv",
+      { command: "node", args: ["single.js"] },
+      { cwd: fakeCwd, global: false },
+    );
+    expect(singleWrite[0].success).toBe(true);
+    expect(singleWrite[0].coConfiguredAgents).toEqual(["antigravity-cli"]);
+
+    // 2. Both co-hosted agents requested: deduplicates physical write to single file
+    const writeResults = store.writeServers(
+      ["antigravity", "antigravity-cli"],
+      "shared-srv",
+      { command: "node", args: ["shared.js"] },
+      { cwd: fakeCwd, global: false },
+    );
+
+    expect(writeResults).toHaveLength(2);
+    expect(writeResults[0].agent).toBe("antigravity");
+    expect(writeResults[0].success).toBe(true);
+    expect(writeResults[0].coConfiguredAgents).toBeUndefined(); // Both are targets, none left out
+
+    expect(writeResults[1].agent).toBe("antigravity-cli");
+    expect(writeResults[1].success).toBe(true);
+    expect(writeResults[1].coConfiguredAgents).toBeUndefined();
+
+    // Verify only one file exists in memory adapter
+    const expectedPath = join(fakeCwd, ".agents", "mcp_config.json");
+    expect(memoryAdapter.exists(expectedPath)).toBe(true);
+
+    const listResult = store.listServers("antigravity", { cwd: fakeCwd, global: false });
+    expect(listResult.servers["shared-srv"]).toBeDefined();
+
+    // 3. Remove single agent: reports coAffectedAgents
+    const singleRemove = store.removeServers(
+      ["antigravity"],
+      "single-srv",
+      { cwd: fakeCwd, global: false },
+    );
+    expect(singleRemove[0].removed).toBe(true);
+    expect(singleRemove[0].coAffectedAgents).toEqual(["antigravity-cli"]);
+
+    // 4. Batch remove both co-hosted agents
+    const removeResults = store.removeServers(
+      ["antigravity", "antigravity-cli"],
+      "shared-srv",
+      { cwd: fakeCwd, global: false },
+    );
+
+    expect(removeResults).toHaveLength(2);
+    expect(removeResults[0].agent).toBe("antigravity");
+    expect(removeResults[0].removed).toBe(true);
+    expect(removeResults[0].coAffectedAgents).toBeUndefined();
+
+    expect(removeResults[1].agent).toBe("antigravity-cli");
+    expect(removeResults[1].removed).toBe(true);
+    expect(removeResults[1].coAffectedAgents).toBeUndefined();
+
+    const afterRemove = store.listServers("antigravity", { cwd: fakeCwd, global: false });
+    expect(afterRemove.servers["shared-srv"]).toBeUndefined();
   });
 });
 

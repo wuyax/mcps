@@ -2,7 +2,7 @@ import { confirm, select } from "@inquirer/prompts";
 import pc from "picocolors";
 
 import { getMcpAgentConfig } from "../agents.ts";
-import { groupInstalledServersByName, listInstalledMcpServers } from "../list.ts";
+import { queryGroupedInstalledServers } from "../list.ts";
 import { removeMcpServer } from "../remove.ts";
 import { agentConfigStore } from "../config-store.ts";
 import type { McpAgentType, McpScopeOptions } from "../types.ts";
@@ -27,14 +27,12 @@ export const wizardRemove = async (options: WizardRemoveOptions = {}): Promise<b
     message: "Select scope to remove MCP server from:",
   });
 
-  const installed = listInstalledMcpServers({ global: isGlobal, cwd });
+  const serverMap = queryGroupedInstalledServers({ global: isGlobal, cwd });
 
-  if (installed.length === 0) {
+  if (serverMap.size === 0) {
     logger.warn(`No installed MCP servers found in ${isGlobal ? "global" : "project"} scope`);
     return false;
   }
-
-  const serverMap = groupInstalledServersByName(installed);
 
   let serverName = options.name;
   if (!serverName) {

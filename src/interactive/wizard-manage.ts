@@ -7,8 +7,7 @@ import {
   getMcpAgentTypes,
 } from "../agents.ts";
 import {
-  groupInstalledServersByName,
-  listInstalledMcpServers,
+  queryGroupedInstalledServers,
   type GroupedInstalledServer,
 } from "../list.ts";
 import { agentConfigStore } from "../config-store.ts";
@@ -20,6 +19,11 @@ import type {
   McpServerConfig,
   McpTransportType,
 } from "../types.ts";
+import {
+  sanitizeUpdatedServerConfig,
+  toRemoteServerConfig,
+  toStdioServerConfig,
+} from "../server-config.ts";
 import { updateMcpServer } from "../update-mcp-server.ts";
 import {
   displayServerDetails,
@@ -61,11 +65,11 @@ export const promptSwitchServerType = async (
     const newArgs = await promptEditArgs([]);
     const newEnv = await promptEditEnvConfig({});
     logger.success(`Switched [${serverName}] configuration to stdio mode`);
-    return {
+    return toStdioServerConfig({
       command: newCmd.trim(),
       args: newArgs.length > 0 ? newArgs : undefined,
       env: Object.keys(newEnv).length > 0 ? newEnv : undefined,
-    };
+    });
   }
 
   const newUrl = await input({
@@ -89,11 +93,13 @@ export const promptSwitchServerType = async (
   });
   const newHeaders = await promptEditHeadersConfig({});
   logger.success(`Switched [${serverName}] configuration to remote mode`);
-  return {
-    url: newUrl.trim(),
-    type: transport,
-    headers: Object.keys(newHeaders).length > 0 ? newHeaders : undefined,
-  };
+  return toRemoteServerConfig(
+    {
+      url: newUrl.trim(),
+      headers: Object.keys(newHeaders).length > 0 ? newHeaders : undefined,
+    },
+    transport,
+  );
 };
 
 const handleEditServerConfig = async (options: EditServerConfigOptions): Promise<void> => {
@@ -307,19 +313,17 @@ export const wizardManage = async (options: WizardManageOptions = {}): Promise<v
     message: "Select MCP scope to inspect and manage:",
   });
 
-  const installed = listInstalledMcpServers({ global: isGlobal, cwd });
+  const grouped = queryGroupedInstalledServers({ global: isGlobal, cwd });
 
-  if (installed.length === 0) {
+  if (grouped.size === 0) {
     logger.warn(`No configured MCP servers found in ${isGlobal ? "global" : "project"} scope`);
     return;
   }
 
-  const grouped = groupInstalledServersByName(installed);
   let pendingServerName = options.serverName;
 
   const refreshGroupedServers = (): void => {
-    const freshInstalled = listInstalledMcpServers({ global: isGlobal, cwd });
-    const freshGrouped = groupInstalledServersByName(freshInstalled);
+    const freshGrouped = queryGroupedInstalledServers({ global: isGlobal, cwd });
     grouped.clear();
     for (const [name, grp] of freshGrouped) {
       grouped.set(name, grp);

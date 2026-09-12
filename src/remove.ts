@@ -1,13 +1,16 @@
-import { getMcpAgentConfig } from "./agents.ts";
 import { agentConfigStore } from "./config-store.ts";
 import { resolveTargetAgents } from "./resolve-target-agents.ts";
-import type { McpAgentType, RemoveMcpServerOptions, RemoveMcpServerResult } from "./types.ts";
-import { toErrorMessage } from "./utils/to-error-message.ts";
+import type {
+  McpAgentType,
+  McpScopeOptions,
+  RemoveMcpServerOptions,
+  RemoveMcpServerResult,
+} from "./types.ts";
 
 export const removeMcpServerFromAgent = (
   serverName: string,
   agentType: McpAgentType,
-  options: { global?: boolean; cwd?: string } = {},
+  options: McpScopeOptions = {},
 ): RemoveMcpServerResult => {
   const results = agentConfigStore.removeServers([agentType], serverName, options);
   return results[0]!;
