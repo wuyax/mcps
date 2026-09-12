@@ -6,7 +6,11 @@ import {
   getMcpAgentsSupportingProjectScope,
   getMcpAgentTypes,
 } from "../agents.ts";
-import { listInstalledMcpServers } from "../list.ts";
+import {
+  groupInstalledServersByName,
+  listInstalledMcpServers,
+  type GroupedInstalledServer,
+} from "../list.ts";
 import { agentConfigStore } from "../config-store.ts";
 import { resolveTargetAgents } from "../resolve-target-agents.ts";
 import type {
@@ -30,10 +34,6 @@ import { promptEditHeadersConfig } from "./prompts/headers.ts";
 import { linkedCheckbox } from "./prompts/linked-checkbox.ts";
 import { promptScope } from "./prompts/scope.ts";
 import { buildLinkedAgentChoices } from "./utils/build-linked-agent-choices.ts";
-import {
-  groupInstalledServersByName,
-  type GroupedInstalledServer,
-} from "./utils/group-installed-servers.ts";
 
 export { displayServerDetails, type DisplayServerDetailsOptions };
 

@@ -54,7 +54,13 @@ export {
   resolveConfigClusters,
   sortAgentsWithClusters,
 } from "./resolve-config-clusters.ts";
-export { listInstalledMcpServers, listInstalledMcpServers as list } from "./list.ts";
+export {
+  groupInstalledServersByName,
+  listInstalledMcpServers,
+  listInstalledMcpServers as list,
+  normalizeServerConfig,
+  queryGroupedInstalledServers,
+} from "./list.ts";
 export {
   extractPackageName,
   isRemoteMcpSource,
@@ -123,11 +129,6 @@ export {
 } from "./interactive/prompts/linked-checkbox.ts";
 export { mcpManageCommand } from "./cli/manage.ts";
 export {
-  groupInstalledServersByName,
-  normalizeServerConfig,
-  type GroupedInstalledServer,
-} from "./interactive/utils/group-installed-servers.ts";
-export {
   buildLinkedAgentChoices,
   type BuildLinkedAgentChoicesOptions,
 } from "./interactive/utils/build-linked-agent-choices.ts";
@@ -140,6 +141,7 @@ export {
 
 export type {
   ConfigCluster,
+  GroupedInstalledServer,
   InstallMcpServerOptions,
   InstallMcpServerResult,
   ListedMcpServer,

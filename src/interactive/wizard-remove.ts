@@ -2,7 +2,7 @@ import { confirm, select } from "@inquirer/prompts";
 import pc from "picocolors";
 
 import { getMcpAgentConfig } from "../agents.ts";
-import { listInstalledMcpServers } from "../list.ts";
+import { groupInstalledServersByName, listInstalledMcpServers } from "../list.ts";
 import { removeMcpServer } from "../remove.ts";
 import { agentConfigStore } from "../config-store.ts";
 import type { McpAgentType, McpScopeOptions } from "../types.ts";
@@ -12,7 +12,6 @@ import { logger } from "../utils/logger.ts";
 import { linkedCheckbox } from "./prompts/linked-checkbox.ts";
 import { promptScope } from "./prompts/scope.ts";
 import { buildLinkedAgentChoices } from "./utils/build-linked-agent-choices.ts";
-import { groupInstalledServersByName } from "./utils/group-installed-servers.ts";
 
 export interface WizardRemoveOptions extends McpScopeOptions {
   name?: string;

@@ -1,12 +1,12 @@
 import { Command } from "commander";
 import pc from "picocolors";
 
+import { wizardManage } from "../interactive/wizard-manage.ts";
 import {
   groupInstalledServersByName,
+  listInstalledMcpServers,
   type GroupedInstalledServer,
-} from "../interactive/utils/group-installed-servers.ts";
-import { wizardManage } from "../interactive/wizard-manage.ts";
-import { listInstalledMcpServers } from "../list.ts";
+} from "../list.ts";
 import type {
   McpAgentType,
   McpScopeOptions,

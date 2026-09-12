@@ -145,6 +145,14 @@ export interface ListedMcpServer {
   serverConfig?: McpServerConfig;
 }
 
+export interface GroupedInstalledServer {
+  serverName: string;
+  agents: McpAgentType[];
+  paths: string[];
+  config: McpServerConfig;
+  hasDivergence?: boolean;
+}
+
 export interface RemoveMcpServerOptions extends McpScopeOptions {
   name: string;
   agents?: McpAgentType[];
