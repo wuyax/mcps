@@ -4,6 +4,7 @@ import {
   getCandidateAgentsForScope,
   getCoHostedAgents,
   resolveConfigClusters,
+  sortAgentsByClusters,
   sortAgentsWithClusters,
 } from "../src/resolve-config-clusters.ts";
 import type { McpAgentType } from "../src/types.ts";
@@ -81,14 +82,22 @@ describe("resolve-config-clusters", () => {
     });
   });
 
-  describe("sortAgentsWithClusters", () => {
+  describe("sortAgentsByClusters", () => {
     it("places co-hosted agents adjacent to each other", () => {
       const input: McpAgentType[] = ["cursor", "antigravity", "vscode", "antigravity-cli"];
-      const sorted = sortAgentsWithClusters(input, { global: true });
+      const sorted = sortAgentsByClusters(input, { global: true });
 
       const idx1 = sorted.indexOf("antigravity");
       const idx2 = sorted.indexOf("antigravity-cli");
       expect(Math.abs(idx1 - idx2)).toBe(1);
+    });
+
+    it("sortAgentsWithClusters is a functional alias for sortAgentsByClusters", () => {
+      const input: McpAgentType[] = ["cursor", "antigravity", "vscode", "antigravity-cli"];
+      const sortedCanonical = sortAgentsByClusters(input, { global: true });
+      const sortedAlias = sortAgentsWithClusters(input, { global: true });
+
+      expect(sortedAlias).toEqual(sortedCanonical);
     });
   });
 });

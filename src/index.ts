@@ -56,6 +56,7 @@ export { resolveMcpConfigTarget, getCandidateAgentsForScope } from "./config-sto
 export {
   getCoHostedAgents,
   resolveConfigClusters,
+  sortAgentsByClusters,
   sortAgentsWithClusters,
 } from "./resolve-config-clusters.ts";
 export {

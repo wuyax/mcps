@@ -653,6 +653,7 @@ import {
   resolveConfigClusters,
   getCoHostedAgents,
   getCandidateAgentsForScope,
+  sortAgentsByClusters,
   sortAgentsWithClusters,
   installToCompatibleAgents,
 } from "@wuyax/mcps";
@@ -673,7 +674,7 @@ for (const cluster of clusters) {
 }
 
 // 3. Sort agents so cluster peers appear adjacent in lists
-const sorted = sortAgentsWithClusters(["github-copilot-cli", "cursor", "claude-code"]);
+const sorted = sortAgentsByClusters(["github-copilot-cli", "cursor", "claude-code"]);
 // ['github-copilot-cli', 'claude-code', 'cursor']
 
 // 4. Batch-install to compatible agents with cluster deduplication

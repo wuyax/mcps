@@ -5,7 +5,7 @@ import {
   getMcpAgentsSupportingProjectScope,
   getMcpAgentTypes,
 } from "../../agents.ts";
-import { sortAgentsWithClusters } from "../../resolve-config-clusters.ts";
+import { agentConfigStore } from "../../config-store.ts";
 import { resolveTargetAgents } from "../../resolve-target-agents.ts";
 import type { McpAgentType, McpScopeOptions } from "../../types.ts";
 import { logger } from "../../utils/logger.ts";
@@ -49,7 +49,10 @@ export const promptScopeAndAgents = async (
   const rawAvailable = isGlobal
     ? getMcpAgentTypes()
     : getMcpAgentsSupportingProjectScope();
-  const availableAgentTypes = sortAgentsWithClusters(rawAvailable, { global: isGlobal, cwd });
+  const availableAgentTypes = agentConfigStore.sortAgentsByClusters(rawAvailable, {
+    global: isGlobal,
+    cwd,
+  });
 
   if (detected.length > 0) {
     logger.info(
