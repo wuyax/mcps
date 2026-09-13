@@ -654,7 +654,6 @@ import {
   getCoHostedAgents,
   getCandidateAgentsForScope,
   sortAgentsByClusters,
-  sortAgentsWithClusters,
   installToCompatibleAgents,
 } from "@wuyax/mcps";
 
@@ -689,7 +688,25 @@ const results = installToCompatibleAgents("my-server", serverConfig, {
 
 ### Exported Utilities & Interactive Prompts
 
-The interactive wizard flows, prompt components, and inspection/sanitization utilities are also exported for programmatic embedding:
+`mcps` provides two dedicated export surfaces:
+1. **Headless Programmatic SDK (`@wuyax/mcps`)**: Clean, dependency-light API for servers, clusters, protocols, and security masking.
+2. **Interactive UI Wizards & Prompts (`@wuyax/mcps/interactive`)**: Terminal UI wizards and Inquirer prompts for custom CLI integrations.
+
+#### Headless Utilities (`@wuyax/mcps`)
+
+```typescript
+import {
+  parseServerConfig,
+  buildMcpServerConfig,
+  applyServerConfigDelta,
+  detectUpdateTransition,
+  sanitizeUpdatedServerConfig,
+  maskSecretValue,
+  maskSecretHeader,
+} from "@wuyax/mcps";
+```
+
+#### Interactive Terminal UI & Wizards (`@wuyax/mcps/interactive`)
 
 ```typescript
 import {
@@ -699,16 +716,6 @@ import {
   wizardRemove,
   linkedCheckbox,
   buildLinkedAgentChoices,
-  groupInstalledServersByName,
-  normalizeServerConfig,
-  formatCoHostedBadge,
-  logCoHostedNotice,
-  displayServerDetails,
-  resolveTransport,
-  maskSecretValue,
-  maskSecretHeader,
-  sanitizeUpdatedServerConfig,
-  detectUpdateTransition,
   promptSwitchServerType,
   promptScopeAndAgents,
   promptEnvConfig,
@@ -716,7 +723,7 @@ import {
   promptArgsConfig,
   parseEnvText,
   parseHeadersText,
-} from "@wuyax/mcps";
+} from "@wuyax/mcps/interactive";
 ```
 
 ---

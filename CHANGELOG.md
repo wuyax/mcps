@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] - 2026-09-13
 
 ### Architecture Deepening & Major Refactoring
 
@@ -43,7 +43,7 @@ To balance clean architecture with secondary development ergonomics, public API 
   - `installMcpServerForAgent`, `installMcpServerForAgents`, and `installToCompatibleAgents` are preserved via `src/install-compat.ts` and continue to be exported from `@wuyax/mcps`.
   - *Recommended Migration*: Call `agentConfigStore.writeServers(agents, name, config, options)` directly.
 - **Server Listing & Grouping**:
-  - `groupInstalledServersByName`, `normalizeServerConfig`, and `type GroupedInstalledServer` are now exported from `src/list.ts` (and re-exported from package root) rather than `interactive/utils/group-installed-servers.ts`.
+  - `queryGroupedInstalledServers`, `listInstalledMcpServers`, and `type GroupedInstalledServer` are exported from `@wuyax/mcps`, providing clean, single-call server querying and grouping.
 - **Server Config Helpers**:
   - `buildMcpServerConfig` (`src/build-server-config.ts`) and `parseServerConfig` (`src/parse-server-config.ts`) are maintained as thin re-exports from `src/server-config.ts`.
   - Added exports for `applyServerConfigDelta`, `type ServerConfigDeltaOptions`, and `type ApplyServerConfigDeltaResult`.
