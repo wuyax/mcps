@@ -1,33 +1,39 @@
 import { describe, expect, it } from "vitest";
 import {
   AgentConfigStore,
-  displayServerDetails,
-
+  maskSecretHeader,
+  maskSecretValue,
+  updateMcpServer,
+  type McpStdioServerConfig,
+} from "../src/index.ts";
+import {
   formatArgsString,
   formatEnvText,
   formatHeadersText,
-  groupInstalledServersByName,
   linkedCheckbox,
   mainMenu,
-  maskSecretHeader,
-  maskSecretValue,
-  mcpManageCommand,
+  parseArgsString,
   parseEnvText,
+  parseHeadersText,
+  promptArgsConfig,
   promptEditArgs,
   promptEditEnvConfig,
   promptEditHeadersConfig,
   promptEditKeyValueConfig,
   promptEnvConfig,
+  promptHeadersConfig,
   promptScope,
   promptScopeAndAgents,
-  updateMcpServer,
+  promptSwitchServerType,
   wizardAdd,
   wizardManage,
   wizardRemove,
-  type McpStdioServerConfig,
-} from "../src/index.ts";
+} from "../src/interactive/index.ts";
 import { MemoryConfigStoreAdapter } from "../src/config-store.ts";
 import { getMcpAgentConfig, isMcpTransportSupported } from "../src/agents.ts";
+import { groupInstalledServersByName } from "../src/list.ts";
+import { displayServerDetails } from "../src/utils/display-server-details.ts";
+import { mcpManageCommand } from "../src/cli/manage.ts";
 
 
 

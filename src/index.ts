@@ -1,149 +1,126 @@
+// ============================================================================
+// @wuyax/mcps — Public Programmatic SDK
+// Clean, robust, and headless API surface for programmatic MCP orchestration.
+// ============================================================================
+
+// ---------------------------------------------------------------------------
+// 1. Agent Detection & Metadata
+// ---------------------------------------------------------------------------
 export {
   detectGloballyInstalledMcpAgents,
   detectProjectInstalledMcpAgents,
   getMcpAgentConfig,
-  getMcpAgentTypes,
   getMcpAgentsSupportingProjectScope,
+  getMcpAgentTypes,
   isMcpAgentType,
   isMcpTransportSupported,
-  mcpAgentAliases,
-  mcpAgents,
   resolveMcpAgentAlias,
 } from "./agents.ts";
+
+// ---------------------------------------------------------------------------
+// 2. Server Config Domain Model, Protocols & State Transitions
+// ---------------------------------------------------------------------------
 export {
   applyServerConfigDelta,
   buildMcpServerConfig,
+  detectUpdateTransition,
   isRemoteServerConfig,
   isStdioServerConfig,
   parseServerConfig,
+  sanitizeUpdatedServerConfig,
+  toRemoteServerConfig,
+  toStdioServerConfig,
   type ApplyServerConfigDeltaResult,
   type BuildMcpServerConfigOptions,
   type McpRemoteServerConfig,
   type McpStdioServerConfig,
   type ServerConfigDeltaOptions,
+  type UpdateTransitionType,
 } from "./server-config.ts";
-export { DEFAULT_REMOTE_TRANSPORT, NPX_COMMAND, NPX_DASH_Y } from "./constants.ts";
+
+// ---------------------------------------------------------------------------
+// 3. Constants
+// ---------------------------------------------------------------------------
+export { DEFAULT_REMOTE_TRANSPORT } from "./constants.ts";
+
+// ---------------------------------------------------------------------------
+// 4. Source Parsing
+// ---------------------------------------------------------------------------
 export {
-  listServersInConfigFile,
-  readConfigFile,
-  removeServerFromConfigFile,
-  writeServerToConfigFile,
-} from "./formats/index.ts";
+  extractPackageName,
+  isRemoteMcpSource,
+  parseMcpSource,
+} from "./source-parser.ts";
+
+// ---------------------------------------------------------------------------
+// 5. Config Store & Pluggable Storage Seam
+// ---------------------------------------------------------------------------
 export {
   AgentConfigStore,
   agentConfigStore,
+  getCandidateAgentsForScope,
+  resolveMcpConfigTarget,
   type AgentConfigStoreListResult,
   type AgentConfigStoreRemoveResult,
   type AgentConfigStoreWriteResult,
   type ConfigStoreAdapter,
   type ConfigTargetDescriptor,
+  type McpConfigTarget,
 } from "./config-store.ts";
+
+// ---------------------------------------------------------------------------
+// 6. Target Resolution & Config Clustering
+// ---------------------------------------------------------------------------
 export {
-  installMcpServer,
-  installMcpServer as add,
-  installMcpServer as install,
-} from "./install-mcp-server.ts";
+  getCoHostedAgents,
+  resolveConfigClusters,
+  sortAgentsByClusters,
+} from "./resolve-config-clusters.ts";
 export {
   resolveTargetAgents,
   type IncompatibleAgent,
   type TargetResolutionQuery,
   type TargetResolutionResult,
 } from "./resolve-target-agents.ts";
-// Backward-compatible thin wrappers (previously in installer.ts, now delegating to Store)
-export { installMcpServerForAgent, installMcpServerForAgents, installToCompatibleAgents } from "./install-compat.ts";
-export type { InstallToCompatibleAgentsOptions } from "./install-compat.ts";
-export { resolveMcpConfigTarget, getCandidateAgentsForScope } from "./config-store.ts";
+
+// ---------------------------------------------------------------------------
+// 7. Core High-Level Orchestration (Programmatic Workflows)
+// ---------------------------------------------------------------------------
+export { installMcpServer } from "./install-mcp-server.ts";
 export {
-  getCoHostedAgents,
-  resolveConfigClusters,
-  sortAgentsByClusters,
-  sortAgentsWithClusters,
-} from "./resolve-config-clusters.ts";
+  installMcpServerForAgents,
+  installMcpServerForAgent,
+  installToCompatibleAgents,
+  type InstallToCompatibleAgentsOptions,
+} from "./install-compat.ts";
+export { updateMcpServer } from "./update-mcp-server.ts";
+export { removeMcpServer } from "./remove.ts";
 export {
-  groupInstalledServersByName,
   listInstalledMcpServers,
-  listInstalledMcpServers as list,
-  normalizeServerConfig,
   queryGroupedInstalledServers,
 } from "./list.ts";
+
+// ---------------------------------------------------------------------------
+// 8. Declarative Dialect Transforms
+// ---------------------------------------------------------------------------
 export {
-  extractPackageName,
-  isRemoteMcpSource,
-  parseMcpSource,
-  parseMcpSource as parseSource,
-} from "./source-parser.ts";
-export { removeMcpServer, removeMcpServer as remove, removeMcpServerFromAgent } from "./remove.ts";
-export {
-  detectUpdateTransition,
-  sanitizeUpdatedServerConfig,
-  toRemoteServerConfig,
-  toStdioServerConfig,
-  updateMcpServer,
-  updateMcpServer as update,
-  type UpdateTransitionType,
-} from "./update-mcp-server.ts";
-export { mainMenu } from "./interactive/main-menu.ts";
-export { wizardAdd } from "./interactive/wizard-add.ts";
-export {
-  displayServerDetails,
-  type DisplayServerDetailsOptions,
-} from "./utils/display-server-details.ts";
-export { resolveTransport } from "./utils/resolve-transport.ts";
+  createAgentTransform,
+  transformServerConfigForAgent,
+} from "./transforms/index.ts";
+
+// ---------------------------------------------------------------------------
+// 9. Security & Masking Utilities
+// ---------------------------------------------------------------------------
 export {
   maskSecretHeader,
   maskSecretValue,
   SECRET_HEADER_PATTERN,
   SECRET_KEY_PATTERN,
 } from "./utils/mask-secret.ts";
-export {
-  promptSwitchServerType,
-  wizardManage,
-  type EditServerConfigOptions,
-  type WizardManageOptions,
-} from "./interactive/wizard-manage.ts";
 
-export { wizardRemove } from "./interactive/wizard-remove.ts";
-export {
-  promptEditKeyValueConfig,
-  type PromptEditKeyValueOptions,
-} from "./interactive/prompts/kv.ts";
-export {
-  formatEnvText,
-  parseEnvText,
-  promptEditEnvConfig,
-  promptEnvConfig,
-} from "./interactive/prompts/env.ts";
-export {
-  formatHeadersText,
-  parseHeadersText,
-  promptEditHeadersConfig,
-  promptHeadersConfig,
-} from "./interactive/prompts/headers.ts";
-export {
-  formatArgsString,
-  parseArgsString,
-  promptArgsConfig,
-  promptEditArgs,
-} from "./interactive/prompts/args.ts";
-export { promptScopeAndAgents } from "./interactive/prompts/agents.ts";
-export { promptScope } from "./interactive/prompts/scope.ts";
-export {
-  linkedCheckbox,
-  type LinkedCheckboxPrompt,
-  type LinkedChoice,
-} from "./interactive/prompts/linked-checkbox.ts";
-export { mcpManageCommand } from "./cli/manage.ts";
-export {
-  buildLinkedAgentChoices,
-  type BuildLinkedAgentChoicesOptions,
-} from "./interactive/utils/build-linked-agent-choices.ts";
-
-export {
-  createAgentTransform,
-  transformServerConfig,
-  transformServerConfigForAgent,
-} from "./transforms/index.ts";
-
+// ---------------------------------------------------------------------------
+// 10. TypeScript Types
+// ---------------------------------------------------------------------------
 export type {
   ConfigCluster,
   GroupedInstalledServer,

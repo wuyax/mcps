@@ -2,6 +2,31 @@
   "name": "@wuyax/mcps",
   "version": "0.1.0-beta.3",
   "description": "Cross-platform MCP (Model Context Protocol) server installer and manager for AI coding agents",
+  "author": "wuyax",
+  "license": "MIT",
+  "packageManager": "pnpm@10.27.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wuyax/mcps.git"
+  },
+  "homepage": "https://github.com/wuyax/mcps#readme",
+  "bugs": {
+    "url": "https://github.com/wuyax/mcps/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai-agents",
+    "claude-code",
+    "cursor",
+    "vscode",
+    "copilot",
+    "installer",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -18,6 +43,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./interactive": {
+      "types": "./dist/interactive.d.ts",
+      "import": "./dist/interactive.js",
+      "require": "./dist/interactive.cjs"
     }
   },
   "scripts": {
